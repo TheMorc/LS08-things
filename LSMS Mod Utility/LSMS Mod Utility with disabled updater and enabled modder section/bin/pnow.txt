@@ -1,0 +1,67 @@
+<savegame1 valid=
+true
+ money=
+999
+999023
+ dayTime=
+482
+041595
+ playTime=
+0
+509596
+ fuelUsage=
+0
+001424
+ seedUsage=
+0
+000000
+ traveledDistance=
+0
+000328
+ hectaresSeeded=
+0
+000000
+ seedingDuration=
+0
+000000
+ hectaresThreshed=
+0
+000000
+ threshingDuration=
+0
+000000
+ farmSiloWheatAmount=
+0
+000000
+ storedWheatFarmSilo=
+0
+000000
+ soldWheatPortSilo=
+0
+000000
+ revenue=
+0
+000000
+ expenses=
+0
+000997
+ timeUntilNextRain=
+114
+958420
+ rainTime=
+0
+000000
+ nextRainDuration=
+236
+000000
+ nextRainType=
+0
+ nextRainValid=
+true
+ saveDate=
+19
+08
+2019
+ densityMapRevision=
+2
+ />

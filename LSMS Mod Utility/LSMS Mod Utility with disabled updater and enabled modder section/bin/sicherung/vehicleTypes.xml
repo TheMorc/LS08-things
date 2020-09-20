@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="iso-8859-1" standalone="no" ?>
+<vehiclesTypes>
+    <steerables>
+        <type name="tractor" className="Vehicle" filename="data/scripts/vehicles/vehicle.lua"/>
+        <type name="combine" className="Combine" filename="data/scripts/vehicles/Combine.lua"/>
+    </steerables>
+    <trailers>
+        <type name="trailer" className="Trailer" filename="data/scripts/vehicles/trailer.lua"/>
+    </trailers>
+    <implements>
+        <type name="implement" className="Implement" filename="data/scripts/vehicles/Implement.lua"/>
+        <type name="cultivator" className="Cultivator" filename="data/scripts/vehicles/cultivator.lua"/>
+        <type name="plough" className="Plough" filename="data/scripts/vehicles/Plough.lua"/>
+        <type name="sprayer" className="Sprayer" filename="data/scripts/vehicles/Sprayer.lua"/>
+        <type name="sowingMachine" className="SowingMachine" filename="data/scripts/vehicles/SowingMachine.lua"/>
+    </implements>
+    <cutters>
+        <type name="cutter" className="Cutter" filename="data/scripts/vehicles/cutter.lua"/>
+    </cutters>
+</vehiclesTypes>

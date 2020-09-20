@@ -1,0 +1,1 @@
+<vehicle filename="data/vehicles/trailers/RB AutoStack/RB AutoStack.xml" xPosition="216" yOffset="3" zPosition="176" yRotation="270" />

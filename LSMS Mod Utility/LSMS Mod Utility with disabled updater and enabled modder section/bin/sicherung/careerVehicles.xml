@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="iso-8859-1" standalone="no" ?>
+<careerVehicles>
+    <vehicle filename="data/vehicles/cutters/fendt/fendtCutter6000.xml" xPosition="170" yOffset="0.5" zPosition="175" yRotation="180"/>
+    <vehicle filename="data/vehicles/cutters/fendt/fendtCutter7700.xml" xPosition="179" yOffset="0.5" zPosition="175" yRotation="180"/>
+    <vehicle filename="data/vehicles/steerable/fendt/fendt716vario.xml" xPosition="190" yOffset="0.5" zPosition="188" yRotation="0"/>
+    <vehicle filename="data/vehicles/steerable/fendt/fendt936vario.xml" xPosition="196" yOffset="0.5" zPosition="188" yRotation="0"/>
+    <vehicle filename="data/vehicles/steerable/fendt/fendt5270.xml" xPosition="170" yOffset="0.5" zPosition="167" yRotation="0"/>
+    <vehicle filename="data/vehicles/steerable/fendt/fendt8350.xml" xPosition="179" yOffset="0.5" zPosition="167" yRotation="0"/>
+    <vehicle filename="data/vehicles/trailers/tipper01.xml" xPosition="145" yOffset="0.5" zPosition="189" yRotation="90"/>
+    <vehicle filename="data/vehicles/tools/cultivator01.xml" xPosition="146.7" yOffset="0.5" zPosition="193" yRotation="90"/>
+    <vehicle filename="data/vehicles/tools/plough01.xml" xPosition="190" yOffset="0.5" zPosition="180" yRotation="0"/>
+    <vehicle filename="data/vehicles/tools/sprayer01.xml" xPosition="196" yOffset="0.5" zPosition="180" yRotation="0"/>
+    <vehicle filename="data/vehicles/tools/extraWeight01.xml" xPosition="202" yOffset="0.5" zPosition="180" yRotation="0"/>
+    <vehicle filename="data/vehicles/tools/sowingMachine01.xml" xPosition="206" yOffset="0.5" zPosition="180" yRotation="0"/>
+    <vehicle filename="data/vehicles/tools/plow01.xml" xPosition="211" yOffset="0.5" zPosition="180" yRotation="0"/>
+
+    <vehicle filename="data/vehicles/steerable/c330 1/c330.xml" xPosition="160" yOffset="1.5" zPosition="248" yRotation="90" />
+    <vehicle filename="data/vehicles/steerable/fmz/bizonsuper.xml" xPosition="196" yOffset="0.5" zPosition="188" yRotation="0"/> )
+    <vehicle filename="data/vehicles/cutters/fmz/bizonheder.xml" xPosition="210" yOffset="0.5" zPosition="188" yRotation="0"/> )
+</careerVehicles>
