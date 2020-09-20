@@ -1,4 +1,4 @@
-GIANTS Blender i3d exporter for versions 0.2.5/0.3.0 - 4.0.0
+GIANTS Blender i3d exporter for GIANTS Editor 0.2.5/0.3.0 - 4.0.0
 ===========================
 
 Installation on Windows
