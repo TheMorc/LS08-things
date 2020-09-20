@@ -1,16 +1,14 @@
-GIANTS Blender i3d exporter
+GIANTS Blender i3d exporter for versions 0.2.5/0.3.0 - 4.0.0
 ===========================
 
-Installation Windows
---------------------
+Installation on Windows
+-----------------------
+1. Download Blender 2.48 (https://download.blender.org/release/Blender2.48/)
 1. Install Python Runtime 2.6 (http://www.python.org/ftp/python/2.6/python-2.6.msi)
 
-2. Setup the environment variable PYTHONPATH to the python installation path. Also 
-   add DLLs and LIB directory.
-   Example: PYTHONPATH = C:\Python26;C:\Python26\DLLs;C:\Python26\Lib
-
 3. Copy blenderI3DExport.py to Blenders scripts directory.
-   (eg. C:\Documents and Settings\<USERNAME>\Application Data\Blender Foundation\Blender\.blender\scripts)
+   (XP: C:\Documents and Settings\<USERNAME>\Application Data\Blender Foundation\Blender\.blender\scripts)
+   (Vista+: %appdata%\Blender Foundation\Blender\.blender\scripts)
   
 Installation Linux
 ------------------
@@ -19,6 +17,10 @@ called "scripts", place the file blenderI3DExport.py there. Restart Blender.
 
 Change log
 ----------
+
+0.2.5-4.0.0 (20.9.2020)
+----------------------
+ - Modified to export i3d 1.5 format files
 
 4.1.2 (01.03.2009)
 ------------------
