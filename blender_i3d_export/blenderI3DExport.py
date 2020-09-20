@@ -1,29 +1,29 @@
 #!BPY
 
 """
-Name: 'GIANTS (.i3d)...'
+Name: 'GIANTS Engine 0.2.5 - 4.0.0 (.i3d)...'
 Blender: 248
 Group: 'Export'
 Tooltip: 'Export to a GIANTS i3D file'
 """
 
-__author__ = "Simon Broggi"
-__url__ = ("giants engine homepage, http://gdn.giants.ch/")
-__version__ = "4.1.2"
-__email__ = "simon.broggi@zhdk.ch"
+__author__ = "Richard Gracik - Morc"
+__url__ = ("biskupovska stranka, http://176.101.178.133:370/")
+__version__ = "0.3.0"
+__email__ = "r.gracik@gmail.com"
 __bpydoc__ = """\
 Exports to Giants .i3d file.
 
 Usage:
--Place this script in youre .blender/scripts directory.
--Open a Scripts window in blender.
--Choose Scripts -> Export -> Giants (.i3d)
+-Place this script in %appdata%/Blender Foundation/Blender/.blender/scripts directory.
+-Open file menu in blender.
+-Choose Export -> GIANTS Engine 0.2.5 - 4.0.0 (.i3d)...
 
 if youre object turns out pink you probably forgot to asign a material.
 if its black you probably forgot to uv unwrap it.
 if youre computer explodes there was probably something wrong with this exporter.
 
-not jet supported / todo:
+things that were supposed to be supported but will never be implemented:
 	Material per Object (only materials per mesh supported).
 	Keyframe animations.
 	Nurb Curves.
@@ -43,9 +43,10 @@ class I3d:
 		self.doc = Document()
 		self.root = self.doc.createElement("i3D")
 		self.root.setAttribute("name", name)
-		self.root.setAttribute("version", "1.6")
+		self.root.setAttribute("version", "1.5")
 		self.root.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
-		self.root.setAttribute("xsi:noNamespaceSchemaLocation", "http://i3d.giants.ch/schema/i3d-1.6.xsd")		
+		self.root.setAttribute("exporter", "Blender i3d exporter modified by Morc")
+		self.root.setAttribute("xsi:noNamespaceSchemaLocation", "http://themorc.gihub.io/")		
 		self.doc.appendChild(self.root)
 		
 		self.asset = self.doc.createElement("Asset")
@@ -123,8 +124,8 @@ class I3d:
 			
 			node = self.doc.createElement("Shape")
 			shapeId, materialIds = self.addMesh(obj.getData(mesh=1), self.parentArmBones)
-			node.setAttribute("shapeId", "%i" %(shapeId))
-			node.setAttribute("materialIds", "%s" %(materialIds))
+			#node.setAttribute("shapeId", "%i" %(shapeId))
+			node.setAttribute("ref", "%s" %(obj.getData(mesh=1).name))
 			
 			if not self.parentArmBones is None:
 				skinBindNodeIds = ""
@@ -194,8 +195,8 @@ class I3d:
 
 		if not node is None:
 			node.setAttribute("name", obj.getName())
-			self.lastNodeId = self.lastNodeId + 1
-			node.setAttribute("nodeId", "%i" %(self.lastNodeId))
+			#self.lastNodeId = self.lastNodeId + 1
+			#node.setAttribute("nodeId", "%i" %(self.lastNodeId))
 			
 			# getLocation("localspace") seems to be buggy!
 			# http://blenderartists.org/forum/showthread.php?t=117421
@@ -290,7 +291,7 @@ class I3d:
 					boneNode = self.doc.createElement("TransformGroup")
 					boneNode.setAttribute("name", bone.name)
 					self.lastNodeId = self.lastNodeId + 1
-					boneNode.setAttribute("nodeId", "%i" %(self.lastNodeId))
+					#boneNode.setAttribute("nodeId", "%i" %(self.lastNodeId))
 					boneNameIndex.append({0:bone.name, 1:self.lastNodeId})
 					mmm = Mathutils.Matrix(bone.matrix["ARMATURESPACE"])
 					pa = bone.parent
@@ -306,7 +307,10 @@ class I3d:
 	def addMesh(self, mesh, parentArmBones=None):
 		#if not parentArmBones == None:
 		#	print "exporting", mesh.name, "armature parented to", parentArmBones
-		for its in self.shapes.getElementsByTagName("IndexedTriangleSet"):
+		
+		tris = self.doc.createElement("Faces")
+		
+		for its in self.shapes.getElementsByTagName("IndexedFaceSet"):
 			if its.getAttribute("name") == mesh.name:
 				#print("  mesh %s is already added" %(mesh.name))
 				materialIds = ""
@@ -323,14 +327,13 @@ class I3d:
 						verts.setAttribute("tangent", "true")
 				return int(its.getAttribute("shapeId")), materialIds
 		
-		its = self.doc.createElement("IndexedTriangleSet")
+		its = self.doc.createElement("IndexedFaceSet")
 		self.lastShapeId = self.lastShapeId + 1
 		its.setAttribute("name", mesh.name)
-		its.setAttribute("shapeId", "%i" % (self.lastShapeId))
+		#its.setAttribute("shapeId", "%i" % (self.lastShapeId))
 		self.shapes.appendChild(its)
 		
 		verts = self.doc.createElement("Vertices")
-		tris = self.doc.createElement("Triangles")
 		subs = self.doc.createElement("Subsets")
 		
 		faceCount = 0
@@ -347,6 +350,7 @@ class I3d:
 		for mat in mesh.materials:
 			materialCount = materialCount + 1
 			matIndex, t = self.addMaterial(mat)
+			tris.setAttribute("shaderlist", mat.name)
 			tangents = tangents or t
 			if materialIds == "":
 				materialIds = "%i" %(matIndex)
@@ -359,14 +363,14 @@ class I3d:
 				
 				def createI3dVert(self, vIndex):
 					v = self.doc.createElement("v")
-					v.setAttribute("p", "%f %f %f" % (face.v[vIndex].co.x, face.v[vIndex].co.z, -face.v[vIndex].co.y))
-					if exportNormals:
-						if face.smooth:
-							v.setAttribute("n", "%f %f %f" % (face.v[vIndex].no.x, face.v[vIndex].no.z, -face.v[vIndex].no.y))
-						else:
-							v.setAttribute("n", "%f %f %f" % (face.no.x, face.no.z, -face.no.y))
-					if mesh.faceUV:#todo multiple uv sets!! but how????
-						v.setAttribute("t0", "%f %f" % (face.uv[vIndex].x, face.uv[vIndex].y))
+					v.setAttribute("c", "%f %f %f" % (face.v[vIndex].co.x, face.v[vIndex].co.z, -face.v[vIndex].co.y))
+					#if exportNormals:
+						#if face.smooth:
+							#v.setAttribute("n", "%f %f %f" % (face.v[vIndex].no.x, face.v[vIndex].no.z, -face.v[vIndex].no.y))
+						#else:
+							#v.setAttribute("n", "%f %f %f" % (face.no.x, face.no.z, -face.no.y))
+					#if mesh.faceUV:#todo multiple uv sets!! but how????
+					#	v.setAttribute("t0", "%f %f" % (face.uv[vIndex].x, face.uv[vIndex].y))
 					if not parentArmBones is None:
 						#print "vertex has weiiiiights!"
 						vGroups = getVGroup(face.v[vIndex].index, mesh)
@@ -399,15 +403,25 @@ class I3d:
 					faceCount = faceCount + 1
 					if exportTriangulated and len(face.v)==4: #it's a quad and user chose to triangulate along shortest edge
 						faceCount = faceCount + 1
+						
 						if (face.v[0].co - face.v[2].co).length < (face.v[1].co - face.v[3].co).length:
+                                                        print("ads")
 							verts.appendChild(createI3dVert(self, 0))
 							vertexCount=vertexCount+1
 							verts.appendChild(createI3dVert(self, 1))
 							vertexCount=vertexCount+1
 							verts.appendChild(createI3dVert(self, 2))
 							vertexCount=vertexCount+1
-							i3dt = self.doc.createElement("t")
+							i3dt = self.doc.createElement("f")
 							i3dt.setAttribute("vi", "%i %i %i" % (vertexCount - 3, vertexCount - 2, vertexCount - 1))
+							if exportNormals:
+                                                                if face.smooth:
+                                                                        i3dt.setAttribute("n", "%f %f %f %f %f %f %f %f %f" % (face.v[0].no.x, face.v[0].no.z, -face.v[0].no.y, face.v[1].no.x, face.v[1].no.z, -face.v[1].no.y, face.v[2].no.x, face.v[2].no.z, -face.v[2].no.y))
+                                                        else:
+                                                                i3dt.setAttribute("n", "%f %f %f %f %f %f %f %f %f" % (face.no.x, face.no.z, -face.no.y, face.no.x, face.no.z, -face.no.y, face.no.x, face.no.z, -face.no.y))
+							i3dt.setAttribute("ci", "0")
+                                                        if mesh.faceUV:#todo multiple uv sets!! but how????
+                                                        	i3dt.setAttribute("t0", "%f %f %f %f %f %f" % (face.uv[0].x, face.uv[0].y, face.uv[1].x, face.uv[1].y, face.uv[2].x, face.uv[2].y))
 							tris.appendChild(i3dt)
 							verts.appendChild(createI3dVert(self, 0))
 							vertexCount=vertexCount+1
@@ -415,18 +429,35 @@ class I3d:
 							vertexCount=vertexCount+1
 							verts.appendChild(createI3dVert(self, 3))
 							vertexCount=vertexCount+1
-							i3dt = self.doc.createElement("t")
+							i3dt = self.doc.createElement("f")
 							i3dt.setAttribute("vi", "%i %i %i" % (vertexCount - 3, vertexCount - 2, vertexCount - 1))
+							if exportNormals:
+                                                                if face.smooth:
+                                                                        i3dt.setAttribute("n", "%f %f %f %f %f %f %f %f %f" % (face.v[0].no.x, face.v[0].no.z, -face.v[0].no.y, face.v[2].no.x, face.v[2].no.z, -face.v[2].no.y, face.v[3].no.x, face.v[3].no.z, -face.v[3].no.y))
+                                                        else:
+                                                                i3dt.setAttribute("n", "%f %f %f %f %f %f %f %f %f" % (face.no.x, face.no.z, -face.no.y, face.no.x, face.no.z, -face.no.y, face.no.x, face.no.z, -face.no.y))
+							i3dt.setAttribute("ci", "0")
+                                                        if mesh.faceUV:#todo multiple uv sets!! but how????
+                                                        	i3dt.setAttribute("t0", "%f %f %f %f %f %f" % (face.uv[0].x, face.uv[0].y, face.uv[2].x, face.uv[2].y, face.uv[3].x, face.uv[3].y))
 							tris.appendChild(i3dt)
 						else:
+                                                        print("asd")
 							verts.appendChild(createI3dVert(self, 0))
 							vertexCount=vertexCount+1
 							verts.appendChild(createI3dVert(self, 1))
 							vertexCount=vertexCount+1
 							verts.appendChild(createI3dVert(self, 3))
 							vertexCount=vertexCount+1
-							i3dt = self.doc.createElement("t")
+							i3dt = self.doc.createElement("f")
 							i3dt.setAttribute("vi", "%i %i %i" % (vertexCount - 3, vertexCount - 2, vertexCount - 1))
+							if exportNormals:
+                                                                if face.smooth:
+                                                                        i3dt.setAttribute("n", "%f %f %f %f %f %f %f %f %f" % (face.v[0].no.x, face.v[0].no.z, -face.v[0].no.y, face.v[1].no.x, face.v[1].no.z, -face.v[1].no.y, face.v[3].no.x, face.v[3].no.z, -face.v[3].no.y))
+                                                        else:
+                                                                i3dt.setAttribute("n", "%f %f %f %f %f %f %f %f %f" % (face.no.x, face.no.z, -face.no.y, face.no.x, face.no.z, -face.no.y, face.no.x, face.no.z, -face.no.y))
+							i3dt.setAttribute("ci", "0")
+                                                        if mesh.faceUV:#todo multiple uv sets!! but how????
+                                                        	i3dt.setAttribute("t0", "%f %f %f %f %f %f" % (face.uv[0].x, face.uv[0].y, face.uv[1].x, face.uv[1].y, face.uv[3].x, face.uv[3].y))
 							tris.appendChild(i3dt)
 							verts.appendChild(createI3dVert(self, 1))
 							vertexCount=vertexCount+1
@@ -434,39 +465,57 @@ class I3d:
 							vertexCount=vertexCount+1
 							verts.appendChild(createI3dVert(self, 3))
 							vertexCount=vertexCount+1
-							i3dt = self.doc.createElement("t")
+							i3dt = self.doc.createElement("f")
 							i3dt.setAttribute("vi", "%i %i %i" % (vertexCount - 3, vertexCount - 2, vertexCount - 1))
+							if exportNormals:
+                                                                if face.smooth:
+                                                                        i3dt.setAttribute("n", "%f %f %f %f %f %f %f %f %f" % (face.v[1].no.x, face.v[1].no.z, -face.v[1].no.y, face.v[2].no.x, face.v[2].no.z, -face.v[2].no.y, face.v[3].no.x, face.v[3].no.z, -face.v[3].no.y))
+                                                        else:
+                                                                i3dt.setAttribute("n", "%f %f %f %f %f %f %f %f %f" % (face.no.x, face.no.z, -face.no.y, face.no.x, face.no.z, -face.no.y, face.no.x, face.no.z, -face.no.y))
+                                                        if mesh.faceUV:#todo multiple uv sets!! but how????
+                                                        	i3dt.setAttribute("t0", "%f %f %f %f %f %f" % (face.uv[1].x, face.uv[1].y, face.uv[2].x, face.uv[2].y, face.uv[3].x, face.uv[3].y))
+							i3dt.setAttribute("ci", "0")
 							tris.appendChild(i3dt)
-					else: 
+					else:
+                                                print("das")
 						verts.appendChild(createI3dVert(self, 0))
 						vertexCount=vertexCount+1
 						verts.appendChild(createI3dVert(self, 1))
 						vertexCount=vertexCount+1
 						verts.appendChild(createI3dVert(self, 2))
 						vertexCount=vertexCount+1
-						i3dt = self.doc.createElement("t")
+						i3dt = self.doc.createElement("f")
 						if len(face.v)==4:#its a quad and is exported as one
 							verts.appendChild(createI3dVert(self, 3))
 							vertexCount=vertexCount+1
 							i3dt.setAttribute("vi", "%i %i %i %i" % (vertexCount - 4, vertexCount - 3, vertexCount - 2, vertexCount - 1))
+							i3dt.setAttribute("ci", "0")
 						else:#it should be a triangle since blender dosnt support ngons, or the user chose not to triangulate
 							i3dt.setAttribute("vi", "%i %i %i" % (vertexCount - 3, vertexCount - 2, vertexCount - 1))
+							i3dt.setAttribute("ci", "0")
+						if exportNormals:
+                                                        if face.smooth:
+                                                                i3dt.setAttribute("n", "%f %f %f %f %f %f %f %f %f" % (face.v[0].no.x, face.v[0].no.z, -face.v[0].no.y, face.v[1].no.x, face.v[1].no.z, -face.v[1].no.y, face.v[2].no.x, face.v[2].no.z, -face.v[2].no.y))
+                                                else:
+                                                        i3dt.setAttribute("n", "%f %f %f %f %f %f %f %f %f" % (face.no.x, face.no.z, -face.no.y, face.no.x, face.no.z, -face.no.y, face.no.x, face.no.z, -face.no.y))
+                                                if mesh.faceUV:#todo multiple uv sets!! but how????
+                                                        i3dt.setAttribute("t0", "%f %f %f %f %f %f" % (face.uv[0].x, face.uv[0].y, face.uv[1].x, face.uv[1].y, face.uv[2].x, face.uv[2].y))	
 						tris.appendChild(i3dt)
-			subset = self.doc.createElement("Subset")
-			subset.setAttribute("firstVertex", "%i" % (firstVertex))
-			subset.setAttribute("numVertices", "%i" % (vertexCount-firstVertex))
-			subset.setAttribute("firstIndex", "%i" % (3 * firstIndex))
-			subset.setAttribute("numIndices", "%i" % (3*(faceCount-firstIndex)))
+			#subset = self.doc.createElement("Subset")
+			#subset.setAttribute("firstVertex", "%i" % (firstVertex))
+			#subset.setAttribute("numVertices", "%i" % (vertexCount-firstVertex))
+			#subset.setAttribute("firstIndex", "%i" % (3 * firstIndex))
+			#subset.setAttribute("numIndices", "%i" % (3*(faceCount-firstIndex)))
 			#subset.setAttribute("numIndices", "%i" % (faceCount-firstIndex))
-			subs.appendChild(subset)
+			#subs.appendChild(subset)
 		
-		tris.setAttribute("count", "%i" % (faceCount))
-		verts.setAttribute("count", "%i" % (vertexCount))
+		#tris.setAttribute("count", "%i" % (faceCount))
+		#verts.setAttribute("count", "%i" % (vertexCount))
 		if tangents:
 			verts.setAttribute("tangent", "true")
-		subs.setAttribute("count", "%i" % (materialCount))
-		if exportNormals:
-			verts.setAttribute("normal", "true")
+		#subs.setAttribute("count", "%i" % (materialCount))
+		#if exportNormals:
+		#	verts.setAttribute("normal", "true")
 		if not parentArmBones is None:
 			verts.setAttribute("blendweights", "true")
 		if mesh.faceUV:#todo multiple uv sets!! but how????
@@ -474,7 +523,7 @@ class I3d:
 				
 		its.appendChild(verts)
 		its.appendChild(tris)
-		its.appendChild(subs)
+		#its.appendChild(subs)
 		
 		return self.lastShapeId, materialIds
 	
@@ -485,7 +534,7 @@ class I3d:
 				self.lastMaterialId = self.lastMaterialId + 1
 				m = self.doc.createElement("Material")
 				m.setAttribute("name", "Default")
-				m.setAttribute("materialId", "%i"%self.lastMaterialId)
+				#m.setAttribute("materialId", "%i"%self.lastMaterialId)
 				m.setAttribute("diffuseColor", "%f %f %f %f" % (1, 0, 1, 1))
 				self.materials.appendChild(m)
 				self.defaultMat = self.lastMaterialId
@@ -499,7 +548,7 @@ class I3d:
 		m = self.doc.createElement("Material")
 		m.setAttribute("name", mat.name)
 		self.lastMaterialId = self.lastMaterialId + 1
-		m.setAttribute("materialId", "%i" % self.lastMaterialId)
+		#m.setAttribute("materialId", "%i" % self.lastMaterialId)
 		
 		m.setAttribute("diffuseColor", "%f %f %f %f" % (mat.getRGBCol()[0]*mat.ref, mat.getRGBCol()[1]*mat.ref, mat.getRGBCol()[2]*mat.ref, mat.getAlpha()))
 		if mat.getAlpha() < 1:
@@ -530,20 +579,20 @@ class I3d:
 					#path = "assets/"+path
 					if textur.mtCol:#Map To Col
 						i3dTex = self.doc.createElement("Texture")
-						i3dTex.setAttribute("fileId", "%i"%self.addFile(path))
+						i3dTex.setAttribute("name", "%i"%self.addFile(path))
 						m.appendChild(i3dTex)
 					if textur.mtNor:#Map To Nor
 						if textur.mtNor == -1:
 							print("WARNING: normalmap %s cannot be inverted by the exporter" %textur.tex.getName())
 						i3dTex = self.doc.createElement("Normalmap")
-						i3dTex.setAttribute("fileId", "%i"%self.addFile(path))
+						i3dTex.setAttribute("name", "%i"%self.addFile(path))
 						m.appendChild(i3dTex)
 						tangents = true
 					if textur.mtCsp:#Map To Spec
 						if textur.mtSpec == -1:
 							print("WARNING: specularmap %s cannot be inverted by the exporter" %textur.tex.getName())
 						i3dTex = self.doc.createElement("Glossmap")
-						i3dTex.setAttribute("fileId", "%i"%self.addFile(path))
+						i3dTex.setAttribute("name", "%i"%self.addFile(path))
 						m.appendChild(i3dTex)
 					#todo: other maps
 			texturN = texturN + 1
@@ -605,7 +654,7 @@ class I3d:
 			if fileId >= newFileId:
 				newFileId = fileId + 1
 		f = self.doc.createElement("File")
-		f.setAttribute("fileId", "%i" % newFileId)
+		f.setAttribute("name", "%i" % newFileId)
 		f.setAttribute("filename", path)
 		if relative:
 			f.setAttribute("relativePath", "true")
@@ -653,7 +702,7 @@ evtAddMatExtension = 8
 
 #toggle button states
 exportSelection = false
-exportNormals = true
+exportNormals = false
 exportTriangulated = true
 
 #global button return values to avoid memory leaks
@@ -678,7 +727,7 @@ exportPath = Draw.Create(Get("filename")[0:Get("filename").rfind(".")]+".i3d")#c
 
 logo = false
 try:
-	logo = Image.Load(Get("scriptsdir")+"/giants_logo.png")
+	logo = Image.Load(Get("scriptsdir")+"/morc.png")
 except:
 	logo = false
 	
