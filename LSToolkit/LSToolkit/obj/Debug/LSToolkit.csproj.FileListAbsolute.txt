@@ -1,0 +1,10 @@
+C:\Users\P5B\Documents\Visual Studio 2008\Projects\LSToolkit\LSToolkit\bin\Debug\LSToolkit.exe
+C:\Users\P5B\Documents\Visual Studio 2008\Projects\LSToolkit\LSToolkit\bin\Debug\LSToolkit.pdb
+C:\Users\P5B\Documents\Visual Studio 2008\Projects\LSToolkit\LSToolkit\obj\Debug\ResolveAssemblyReference.cache
+C:\Users\P5B\Documents\Visual Studio 2008\Projects\LSToolkit\LSToolkit\obj\Debug\LSToolkit.Form1.resources
+C:\Users\P5B\Documents\Visual Studio 2008\Projects\LSToolkit\LSToolkit\obj\Debug\LSToolkit.Properties.Resources.resources
+C:\Users\P5B\Documents\Visual Studio 2008\Projects\LSToolkit\LSToolkit\obj\Debug\LSToolkit.csproj.GenerateResource.Cache
+C:\Users\P5B\Documents\Visual Studio 2008\Projects\LSToolkit\LSToolkit\obj\Debug\LSToolkit.exe
+C:\Users\P5B\Documents\Visual Studio 2008\Projects\LSToolkit\LSToolkit\obj\Debug\LSToolkit.pdb
+C:\Users\P5B\Documents\Visual Studio 2008\Projects\LSToolkit\LSToolkit\bin\Debug\LSToolkit.exe.config
+C:\Users\P5B\Documents\Visual Studio 2008\Projects\LSToolkit\LSToolkit\obj\Debug\LSToolkit.Form2.resources
