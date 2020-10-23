@@ -3,13 +3,13 @@
 # <pep8-80 compliant>
 
 bl_info = {
-    "name": "I3D format",
+    "name": "i3D format",
     "author": "Community",
     "blender": (2, 6, 2),
     "location": "File > Import-Export",
-    "description": "I3D Exporter (v5.0.1)",
+    "description": "i3D Exporter (v0.2.5 - 4.0.0)",
     "warning": "",
-    "wiki_url": "http://gdn.giants-software.com",
+    "wiki_url": "http://176.101.178.133:370/",
     "tracker_url": "",
     "support": 'COMMUNITY',
     "category": "Import-Export"}
@@ -52,7 +52,7 @@ class ExportI3D(bpy.types.Operator, ExportHelper):
 
 
 def menu_func(self, context):
-    self.layout.operator(ExportI3D.bl_idname, text="GIANTS (.i3d)")
+    self.layout.operator(ExportI3D.bl_idname, text="GIANTS v0.2.5 - 4.0.0 (.i3d)")
 
 
 def register():

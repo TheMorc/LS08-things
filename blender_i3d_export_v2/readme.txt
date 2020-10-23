@@ -1,4 +1,4 @@
-GIANTS Blender i3d exporter
+GIANTS Blender i3d exporter v2 for GIANTS Editor 0.2.5/0.3.0 - 4.0.0
 ===========================
 
 Installation
@@ -18,15 +18,19 @@ Installation
  
 6. Select the file __init__.py and click "Install Addon...".
 
-7. Select and enable the "Import-Export: I3D format" addon in the right list.
+7. Select and enable the "Import-Export: i3D format" addon in the right list.
    Hint: Apply the "Community" and "Import-Export" filters on the left for less items to browse.
 
 8. Click on the "Save as Default" button to automatically load the addon each time you launch Blender.
 
-9. Now, you can export with "File -> Export" to "GIANTS (.i3d)".
+9. Now, you can export with "File -> Export" to "GIANTS v0.2.5 - 4.0.0 (.i3d)".
 
 Change log
 ----------
+
+0.2.5-4.0.0 v2 (23.10.2020)
+----------------------
+ - Exporter modified to properly export i3d 1.5 format files
 
 5.0.1 (10.09.2012)
 ------------------
