@@ -4,11 +4,11 @@ This is a Landwirtschafts Simulator 2008 / Farming Simulator 2008 repository.
 It includes:
 * LSMS Mod Utility decompilation
 * LSToolkit src code
-* (maybe also) GIANTSi3dFormatConvertor src code
-* modified Blender Exporter for GE 0.2.5-4.0.0
+* ~~(maybe also) GIANTSi3dFormatConvertor src code~~ This thing doesn't exist yet...
+* both versions of i3d Blender Exporter for GIANTS Editor v0.2.5-4.0.0
 * unpacked scripts.zip
 
-and more to come..
+and hopefully even more things to come..
 
 ## Passwords
 `411S6R5772V673kT` password for most versions of the game
