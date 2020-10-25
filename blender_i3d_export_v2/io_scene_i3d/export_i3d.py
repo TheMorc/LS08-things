@@ -166,7 +166,7 @@ def save(operator, context, filepath="",
 		v1 = me.vertices[ f.vertices[0] ]
 		v2 = me.vertices[ f.vertices[1] ]
 		v3 = me.vertices[ f.vertices[2] ]
-		tri.setAttribute("ci", "0")
+		tri.setAttribute("ci", "%d" % matInd)
 		if f.use_smooth:
 			tri.setAttribute("n", '%.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f' % (v1.normal.x,v1.normal.z,-v1.normal.y,v2.normal.x,v2.normal.z,-v2.normal.y,v3.normal.x,v3.normal.z,-v3.normal.y))
 		else:
@@ -184,8 +184,11 @@ def save(operator, context, filepath="",
 			v1 = me.vertices[ f.vertices[0] ]
 			v2 = me.vertices[ f.vertices[1] ]
 			v3 = me.vertices[ f.vertices[2] ]
-			tri.setAttribute("ci", "0")
-			tri.setAttribute("n", '%.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f' % (v1.co.x,v1.co.z,-v1.co.y,v2.co.x,v2.co.z,-v2.co.y,v3.co.x,v3.co.z,-v3.co.y))
+			tri.setAttribute("ci", "%d" % matInd)
+			if f.use_smooth:
+				tri.setAttribute("n", '%.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f' % (v1.normal.x,v1.normal.z,-v1.normal.y,v2.normal.x,v2.normal.z,-v2.normal.y,v3.normal.x,v3.normal.z,-v3.normal.y))
+			else:
+				tri.setAttribute("n", '%.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f' % (f.normal.x,f.normal.z,-f.normal.y,f.normal.x,f.normal.z,-f.normal.y,f.normal.x,f.normal.z,-f.normal.y))
 			save.triangles.appendChild(tri)
 			return (6,2) # 6 Vertices in a quad
 		return (3,1) # 3 Vertices in triangle
@@ -212,7 +215,6 @@ def save(operator, context, filepath="",
 			material = save.doc.createElement("Material")
 			material.setAttribute("name", mat.name)
 			#material.setAttribute("name","%d" % (save.id))
-			save.triangles.setAttribute("shaderlist", "%s" % mat.name)
 			tex_id = writeTexture(mat.active_texture)
 			if tex_id != None:
 				texture = save.doc.createElement("Texture")
@@ -227,6 +229,8 @@ def save(operator, context, filepath="",
 	# Export a mesh to shape
 	def writeMesh(me,name):
 		mats = me.materials
+		matNames = ""
+		lastMat = ""
 		if newTriangleSet(name,me) == True:
 			print("\tExporting Mesh: %s" % name)
 			faces = me.faces[:]
@@ -239,12 +243,19 @@ def save(operator, context, filepath="",
 				subFaces = 0
 				material = me.materials[matId] 
 				print(material.name)
+				if matId == 0:
+					matNames = material.name
+				else:
+					matNames = matNames + ", " + material.name
+					
+				save.triangles.setAttribute("shaderlist", "%s" % matNames)
 				for f in faces:
 					vc, fc = writeFace(me, matId, f)
 					subVerts += vc
 					subFaces += fc
-				totalVertices += subVerts
-				totalFaces += subFaces
+				lastMat = material.name
+				#totalVertices += subVerts
+				#totalFaces += subFaces
 				# Save the subset for this material
 				#writeSubset(subVerts)
 			
