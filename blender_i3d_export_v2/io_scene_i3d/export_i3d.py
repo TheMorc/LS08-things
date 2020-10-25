@@ -51,23 +51,21 @@ def save(operator, context, filepath="",
 	save.node_id = 0
 	save.uvs = []
 	
-	materialName = "mat"
-	
 	save.doc = Document()
 	
 	save.i3D = save.doc.createElement("i3D")
 	save.doc.appendChild(save.i3D)
 	save.i3D.setAttribute("name", os.path.basename(bpy.data.filepath))
-	save.i3D.setAttribute("version", "1.5")
-	save.i3D.setAttribute("xsi:noNamespaceSchemaLocation", "http://i3d.giants.ch/schema/i3d-1.5.xsd")
+	save.i3D.setAttribute("version", "1.6")
+	save.i3D.setAttribute("xsi:noNamespaceSchemaLocation", "http://i3d.giants.ch/schema/i3d-1.6.xsd")
 	save.i3D.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance")
 	
 	save.asset = save.doc.createElement("Asset")
 	save.i3D.appendChild(save.asset)
 	
 	export = save.doc.createElement("Export")
-	export.setAttribute("version", "2")
-	export.setAttribute("program", "Blender GE Exporter by Morc")
+	export.setAttribute("version", "262")
+	export.setAttribute("program", "Blender")
 	save.asset.appendChild(export)	
 	
 	save.files = save.doc.createElement("Files")
@@ -94,10 +92,10 @@ def save(operator, context, filepath="",
 	def newTriangleSet(name,me):
 		if name not in save.shape_ids:
 			save.id = save.id + 1
-			save.triSet = save.doc.createElement("IndexedFaceSet")
+			save.triSet = save.doc.createElement("IndexedTriangleSet")
 			save.shapes.appendChild(save.triSet)
 			save.triSet.setAttribute("name", name)
-			#save.triSet.setAttribute("shapeId","%d" % (save.id))
+			save.triSet.setAttribute("shapeId","%d" % (save.id))
 			save.shape_ids[name] = save.id
 			
 			save.vertices = save.doc.createElement("Vertices")
@@ -107,25 +105,24 @@ def save(operator, context, filepath="",
 					save.vertices.setAttribute("uv0", "true")
 			save.vertices.setAttribute("normal", "true")
 			save.triSet.appendChild(save.vertices)
-			save.triangles = save.doc.createElement("Faces")
+			save.triangles = save.doc.createElement("Triangles")
 			save.triSet.appendChild(save.triangles)
-			#save.subs = save.doc.createElement("Subsets")
-			#save.triSet.appendChild(save.subs)
+			save.subs = save.doc.createElement("Subsets")
+			save.triSet.appendChild(save.subs)
 			return True
 		return False
 		
 	def addSubset(start):
-		print("d")
-		#save.subset = save.doc.createElement("Subset")
-		#save.subset.setAttribute("firstVertex","%d" % start)
-		#save.subset.setAttribute("firstIndex","%d" % start)
+		save.subset = save.doc.createElement("Subset")
+		save.subset.setAttribute("firstVertex","%d" % start)
+		save.subset.setAttribute("firstIndex","%d" % start)
 		
 	def writeSubset(size):
 		# We only attach the subset if there's anything in it
 		if size > 0:
 			save.subset.setAttribute("numVertices","%d" % size)
 			save.subset.setAttribute("numIndices","%d" % size)
-			#save.subs.appendChild(save.subset)
+			save.subs.appendChild(save.subset)
 	
 	def activeUV(mesh):
 		for uv_tex in mesh.uv_textures:
@@ -136,15 +133,17 @@ def save(operator, context, filepath="",
 	def writeVertex(me, vIndex, face):
 		v = me.vertices[ face.vertices[vIndex] ]
 		vert = save.doc.createElement("v")
-		vert.setAttribute("c", '%.6f %.6f %.6f' % (v.co.x,v.co.z,-v.co.y))
-		#if face.use_smooth:
-			#vert.setAttribute("c", '%.6f %.6f %.6f' % (v.normal.x, v.normal.z, -v.normal.y))
-		#else:
-		#	vert.setAttribute("c", '%.6f %.6f %.6f' % (face.normal.x, face.normal.z, -face.normal.y))
+		vert.setAttribute("p", '%.6f %.6f %.6f' % (v.co.x,v.co.z,-v.co.y))
+		if face.use_smooth:
+			vert.setAttribute("n", '%.6f %.6f %.6f' % (v.normal.x, v.normal.z, -v.normal.y))
+		else:
+			vert.setAttribute("n", '%.6f %.6f %.6f' % (face.normal.x, face.normal.z, -face.normal.y))
+		#Get active UV set
+		uv_tex = activeUV(me)
+		if uv_tex != None and len(uv_tex.data) > 0:
+			uvs = ( uv_tex.data[face.index].uv[vIndex][0], uv_tex.data[face.index].uv[vIndex][1]) 
+			vert.setAttribute("t0", '%.6f %.6f' % uvs)
 		save.vertices.appendChild(vert)
-		return len(save.vertices.childNodes)-1
-	
-	def fakewriteVertex(me, vIndex, face):
 		return len(save.vertices.childNodes)-1
 	
 	def writeFace(me, matInd, f):
@@ -155,22 +154,9 @@ def save(operator, context, filepath="",
 		indices = "%s %d" % (indices , writeVertex(me, 0, f))
 		indices = "%s %d" % (indices , writeVertex(me, 1, f))
 		indices = "%s %d" % (indices , writeVertex(me, 2, f))
-		tri = save.doc.createElement("f")
+		tri = save.doc.createElement("t")
 		faceVerts = f.vertices[:]
 		tri.setAttribute("vi", indices.strip() )
-		#Get active UV set
-		uv_tex = activeUV(me)
-		if uv_tex != None and len(uv_tex.data) > 0:
-			uvs = ( uv_tex.data[f.index].uv[0][0], uv_tex.data[f.index].uv[0][1], uv_tex.data[f.index].uv[1][0], uv_tex.data[f.index].uv[1][1], uv_tex.data[f.index].uv[2][0], uv_tex.data[f.index].uv[2][1]) 
-			tri.setAttribute("t0", '%.6f %.6f %.6f %.6f %.6f %.6f' % uvs)
-		v1 = me.vertices[ f.vertices[0] ]
-		v2 = me.vertices[ f.vertices[1] ]
-		v3 = me.vertices[ f.vertices[2] ]
-		tri.setAttribute("ci", "0")
-		if f.use_smooth:
-			tri.setAttribute("n", '%.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f' % (v1.normal.x,v1.normal.z,-v1.normal.y,v2.normal.x,v2.normal.z,-v2.normal.y,v3.normal.x,v3.normal.z,-v3.normal.y))
-		else:
-			tri.setAttribute("n", '%.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f' % (f.normal.x,f.normal.z,-f.normal.y,f.normal.x,f.normal.z,-f.normal.y,f.normal.x,f.normal.z,-f.normal.y))
 		save.triangles.appendChild(tri)
 		if len(f.vertices) == 4:
 			#Export 2nd triangle for quads
@@ -178,14 +164,9 @@ def save(operator, context, filepath="",
 			indices = "%s %d" % (indices , writeVertex(me, 0, f))
 			indices = "%s %d" % (indices , writeVertex(me, 2, f))
 			indices = "%s %d" % (indices , writeVertex(me, 3, f))
-			tri = save.doc.createElement("f")
+			tri = save.doc.createElement("t")
 			faceVerts = f.vertices[:]
 			tri.setAttribute("vi", indices.strip() )
-			v1 = me.vertices[ f.vertices[0] ]
-			v2 = me.vertices[ f.vertices[1] ]
-			v3 = me.vertices[ f.vertices[2] ]
-			tri.setAttribute("ci", "0")
-			tri.setAttribute("n", '%.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f' % (v1.co.x,v1.co.z,-v1.co.y,v2.co.x,v2.co.z,-v2.co.y,v3.co.x,v3.co.z,-v3.co.y))
 			save.triangles.appendChild(tri)
 			return (6,2) # 6 Vertices in a quad
 		return (3,1) # 3 Vertices in triangle
@@ -195,7 +176,7 @@ def save(operator, context, filepath="",
 		if tex != None and tex.type == 'IMAGE' and (tex.image.filepath not in save.file_ids):
 			save.id = save.id + 1
 			file = save.doc.createElement("File")
-			file.setAttribute("name", "%d" % (save.id))
+			file.setAttribute("fileId", "%d" % (save.id))
 			save.file_ids[tex.image.filepath] = save.id;
 			#Why does the relative path even matter?
 			file.setAttribute("filename", os.path.basename(tex.image.filepath))
@@ -211,12 +192,11 @@ def save(operator, context, filepath="",
 			print("\tMaterial: %s Exported" % (mat.name))
 			material = save.doc.createElement("Material")
 			material.setAttribute("name", mat.name)
-			#material.setAttribute("name","%d" % (save.id))
-			save.triangles.setAttribute("shaderlist", "%s" % mat.name)
+			material.setAttribute("materialId","%d" % (save.id))
 			tex_id = writeTexture(mat.active_texture)
 			if tex_id != None:
 				texture = save.doc.createElement("Texture")
-				texture.setAttribute("name","%d" % (tex_id))
+				texture.setAttribute("fileId","%d" % (tex_id))
 				material.appendChild(texture)
 			material.setAttribute("diffuseColor","%.6f %.6f %.6f %.6f" % (mat.diffuse_color[0], mat.diffuse_color[1], mat.diffuse_color[2], mat.alpha))
 			material.setAttribute("cosPower","%d" % (50))
@@ -234,7 +214,7 @@ def save(operator, context, filepath="",
 			totalVertices = 0
 			totalFaces = 0
 			for matId in range(0,len(mats)):
-				#addSubset(totalVertices)
+				addSubset(totalVertices)
 				subVerts = 0
 				subFaces = 0
 				material = me.materials[matId] 
@@ -246,11 +226,11 @@ def save(operator, context, filepath="",
 				totalVertices += subVerts
 				totalFaces += subFaces
 				# Save the subset for this material
-				#writeSubset(subVerts)
+				writeSubset(subVerts)
 			
-			#save.vertices.setAttribute("count", "%d" % totalVertices)
-			#save.triangles.setAttribute("count", "%d" % totalFaces)
-			#save.subs.setAttribute("count","%d" % len(save.subs.childNodes))
+			save.vertices.setAttribute("count", "%d" % totalVertices)
+			save.triangles.setAttribute("count", "%d" % totalFaces)
+			save.subs.setAttribute("count","%d" % len(save.subs.childNodes))
 		
 		matids = ""
 		for m in mats:
@@ -278,8 +258,8 @@ def save(operator, context, filepath="",
 				mesh = obj.to_mesh(obj.users_scene[0], True, 'PREVIEW')
 			
 			shape_id,mats = writeMesh(mesh,obj.data.name)
-			element.setAttribute("ref", "%s" % obj.data.name)
-			#element.setAttribute("materialIds", "%s" % mats)
+			element.setAttribute("shapeId", "%d" % shape_id)
+			element.setAttribute("materialIds", "%s" % mats)
 			
 			# If the mesh was created using create_mesh, we must destroy it
 			if use_modifiers == True:
@@ -320,7 +300,7 @@ def save(operator, context, filepath="",
 		print("Exporting Object %s [%s]" % (obj.name, obj.type))
 		
 		save.node_id = save.node_id + 1
-		#element.setAttribute("nodeId", "%d" % save.node_id)
+		element.setAttribute("nodeId", "%d" % save.node_id)
 		element.setAttribute("name", obj.name)
 		
 		translation = matrix.to_translation()
