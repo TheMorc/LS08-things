@@ -300,6 +300,7 @@ def save(operator, context, filepath="",
 			if use_physics == True:
 				if obj.game.physics_type == 'STATIC':
 					#element.setAttribute("static", "true") i would rather let the engine decide for itself and let it without any rigidbody physics
+					element.setAttribute("static", "false")
 				elif obj.game.physics_type == 'RIGID_BODY':
 					element.setAttribute("dynamic", "true")
 					element.setAttribute("mass", "%.6f" % obj.game.mass)
