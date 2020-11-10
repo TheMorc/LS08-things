@@ -4,6 +4,7 @@ This is a Landwirtschafts Simulator 2008 / Farming Simulator 2008 repository.
 It includes:
 * LSMS Mod Utility decompilation
 * LSToolkit src code
+* LS2008MP src code
 * ~~(maybe also) GIANTSi3dFormatConvertor src code~~ This thing doesn't exist yet...
 * both versions of i3d Blender Exporter for GIANTS Editor v0.2.5-4.0.0
 * unpacked scripts.zip
