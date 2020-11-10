@@ -4,13 +4,18 @@
 -- @author  Richard Gráčik (mailto:r.gracik@gmail.com)
 -- @date  10.11.2020
 
-isMPloaded = false
-MPversion = 0.01
+MPsocket = require("socket")
+MPip, MPport = "176.101.178.133", 2008
+MPudp = socket.udp()
+MPudp:settimeout(0)
 
-MPstate = "Server"
-MPHeartbeat = MPServerHeartbeat
-MPip = "*"
+isMPloaded = false
+MPversion = 0.02
+
+MPstate = "none"
+MPHeartbeat = nil
 MPstarted = false
+MPinitSrvCli = false
 
 original = { 
 	 drawing = draw,
@@ -49,6 +54,7 @@ end
 
 --MP update function
 function MPupdate(dt)
+	
 	if MPstarted then
 		MPHeartbeat()
 	end
@@ -60,7 +66,7 @@ end
 function MPdraw()
 	setTextBold(true);
 	renderText(0.0, 0.98, 0.02, "LS2008MP v" .. MPversion .. " as " .. MPstate .. " - running: " .. tostring(MPstarted));
-	renderText(0.0, 0.96, 0.02, "IP: " .. MPip);
+	renderText(0.0, 0.96, 0.02, "IP: " .. MPip .. ":" .. MPport);
 	setTextBold(false);
 	
 	original.drawing()
@@ -84,6 +90,7 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
 		end;
 		
 		if sym == Input.KEY_x and isDown then
+			MPinitSrvCli = false
 			MPstarted = not MPstarted
 		end;
 		
@@ -93,9 +100,31 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
 end
 
 function MPClientHeartbeat()
-	print("client beep")
+	if not MPinitSrvCli then
+		MPinitSrvCli = true
+		print("LS2008MP starting client")
+		MPudp:setpeername(MPip, MPport)
+	end
+
+	--MPudp:send("this is a client sending data to the server")
+	data = MPudp:receive()
+	if data then
+		print(data)
+	end
+		
 end
 
 function MPServerHeartbeat()
-	print("server beep")
+	if not MPinitSrvCli then
+		MPinitSrvCli = true
+		print("LS2008MP starting client")
+		MPudp:setsockname("*", MPport)
+	end
+
+	data, msg_or_ip, port_or_nil = MPudp:receivefrom()
+	print(data)
+	if data then
+		--MPudp:sendto("this is a server sending data to the client", msg_or_ip, port_or_nil)
+	end
+	
 end
