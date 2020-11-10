@@ -4,7 +4,7 @@ GIANTS Blender i3d exporter v2 for GIANTS Editor 0.2.5/0.3.0 - 4.0.0
 Installation
 ------------
 
-1. Install Blender 2.6.2 32 or 64bit or above (http://www.blender.org/download/get-blender/).
+1. Install Blender 2.62 32 or 64bit (https://download.blender.org/release/Blender2.62/).
 
 2. Extract the io_scene_i3d folder from the zip archive and place it in your Blender addons folder.
    Example addons folder path: C:\Program Files\Blender Foundation\Blender\2.62\scripts\addons
