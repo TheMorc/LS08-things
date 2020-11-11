@@ -6,7 +6,7 @@
 
 --LS2008MP related stuff
 isMPinjected = false
-MPversion = 0.04
+MPversion = 0.05
 
 --LuaSocket stuff
 MPsocket = require("socket")
@@ -19,10 +19,10 @@ MPcurrClientPort = 0
 --MP server-client variables
 MPstate = "none"  --text state
 MPHeartbeat = nil --MPServer or ClientHeartbeat function
-MPrunning = false --MP running/started state
-MPinitSrvCli = false --first server/client init
-MPpingStart = os.time()
-MPpingEnd = MPpingStart+5
+MPenabled = false --MP enabled state (not connected)
+MPinitSrvCli = false --server/client init/connect
+MPupdateStart = os.time()
+MPupdateEnd = MPupdateStart
 
 --MP chat veriables
 MPchat = false --chat view status
@@ -36,6 +36,7 @@ MPcurrPlayerNameList = {}
 MPcurrPlayerIPList = {}
 MPcurrPlayerPortList = {}
 
+MPupdateTick = 0
 
 --original functions from main.lua
 original = {  --(they are replaced with functions from this injector but a copy is left here)
@@ -76,6 +77,7 @@ function init()
 	--package.path = package.path .. ";" .. getUserProfileAppPath()
     --copyFile(getAppBasePath() .. "multiplayerTemplate.lua", getUserProfileAppPath() .. "multiplayer.lua", false);
 	require("multiplayer")
+	MPplayerName = MPplayerName .. math.random (150)
 	print("LS2008MP your server IP: " .. MPip)
 	print("LS2008MP your player name: " .. MPplayerName)
 end
@@ -83,17 +85,37 @@ end
 --MP update function
 function MPupdate(dt)
 	
-	if MPrunning then
+	if g_currentMission ~= nil and MPenabled then
 		MPHeartbeat()
 		
-		if os.time() >= MPpingEnd then
-			MPpingStart = os.time()
-			MPpingEnd = MPpingStart+5	
+		--if os.time() >= MPupdateEnd then
+		--	MPupdateStart = os.time()
+		--	MPupdateEnd = MPupdateStart+.2
 			--MPPing()
-			for i,line in ipairs(MPcurrPlayerNameList) do
+			--for i,line in ipairs(MPcurrPlayerNameList) do
 				--print(i .. line .. MPcurrPlayerIPList[i] .. MPcurrPlayerPortList[i])
+			--end
+			if MPupdateTick > 5 then
+				for i=1,#g_currentMission.vehicles do
+					if g_currentMission.vehicles[i].isEntered then
+						local tempTX, tempTY, tempTZ = getTranslation(g_currentMission.vehicles[i].rootNode)
+						local tempRX, tempRY, tempRZ = getRotation(g_currentMission.vehicles[i].rootNode)
+						UDPmoverot = "broadcast;moverot;"..MPplayerName.. ";" .. i..";"..tempTX..";"..tempTY..";"..tempTZ .. ";" ..tempRX..";"..tempRY..";"..tempRZ
+					
+						if MPstate == "Client" then
+							MPudp:send(UDPmoverot)
+						else
+							handleUDPmessage(UDPmoverot, MPip, MPport)
+							--handleUDPmessage(UDProt, MPip, MPport)
+						end
+					
+					end
+				end
+			MPupdateTick = 0
+			else
+				MPupdateTick = MPupdateTick + 1
 			end
-		end
+		--end
 	
 	end
 	
@@ -103,7 +125,7 @@ end
 --MP draw function
 function MPdraw()
 	setTextBold(true);
-	renderText(0.0, 0.98, 0.02, "LS2008MP v" .. MPversion .. " | " .. MPstate .. " | running: " .. tostring(MPrunning) .. " | Player Name: " .. MPplayerName);
+	renderText(0.0, 0.98, 0.02, "LS2008MP v" .. MPversion .. " | " .. MPstate .. " | enabled: " .. tostring(MPenabled) .. " | running: " .. tostring(MPinitSrvCli) .. " | Player Name: " .. MPplayerName);
 	renderText(0.0, 0.96, 0.02, "IP: " .. MPip .. ":" .. MPport);
 	setTextBold(false);
 	
@@ -145,12 +167,12 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
 		
 			if sym == Input.KEY_x and isDown then
 				MPinitSrvCli = false
-				MPrunning = not MPrunning
+				MPenabled = not MPenabled
 			end
 		end
 	end
 	
-	if isDown and MPchat and MPrunning then
+	if isDown and MPchat and MPenabled then
 		if sym == Input.KEY_esc then --escape to close the chat
 			MPchat = false
 			print("LS2008MP closing chat in-game chat")
@@ -160,9 +182,9 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
 			print("LS2008MP sending a chat message")
 			
 			if MPstate == "Client" then
-				MPudp:send("broadcast;"..MPplayerName.. ": " .. MPchatText)
+				MPudp:send("broadcast;chat;"..MPplayerName.. ": " .. MPchatText)
 			else
-				handleUDPmessage("broadcast;"..MPplayerName.. ": " .. MPchatText, MPcurrClientIP, MPcurrClientPort)
+				handleUDPmessage("broadcast;chat;"..MPplayerName.. ": " .. MPchatText, MPip, MPport)
 			end
 			
 			MPchat = false
@@ -171,12 +193,12 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
 			MPchatText = string.sub(MPchatText,1, -2)
 			return
 		else --nothing from above, lets assume it is a normal letter and deSDLify it
-			MPchatText = MPchatText .. deSDLify(sym)
+			MPchatText = MPchatText .. string.char(unicode)
 			return
 		end
 	end
 	
-	if sym == Input.KEY_t and isDown and MPrunning then --open the chat
+	if sym == Input.KEY_t and isDown and MPenabled then --open the chat
 		MPrenderHistory = true
 		MPchat = true
 		print("LS2008MP opening in-game chat")
@@ -233,51 +255,9 @@ function split(s, delimiter)
 	return result
 end
 
-function deSDLify(kcd)
-	if     kcd == 9		then return ""
-	elseif kcd == 32	then return " "
-	elseif kcd == 33	then return "!"
-	elseif kcd == 42	then return "*"
-	elseif kcd == 43	then return "+"
-	elseif kcd == 44	then return ","
-	elseif kcd == 45	then return "-"
-	elseif kcd == 46	then return "."
-	elseif kcd == 47	then return "/"
-	elseif kcd == 97	then return "a"
-	elseif kcd == 98	then return "b"
-	elseif kcd == 99	then return "c"
-	elseif kcd == 100	then return "d"
-	elseif kcd == 101	then return "e"
-	elseif kcd == 102	then return "f"
-	elseif kcd == 103	then return "g"
-	elseif kcd == 104	then return "h"
-	elseif kcd == 105	then return "i"
-	elseif kcd == 106	then return "j"
-	elseif kcd == 107	then return "k"
-	elseif kcd == 108	then return "l"
-	elseif kcd == 109	then return "m"
-	elseif kcd == 110	then return "n"
-	elseif kcd == 111	then return "o"
-	elseif kcd == 112	then return "p"
-	elseif kcd == 113	then return "q"
-	elseif kcd == 114	then return "r"
-	elseif kcd == 115	then return "s"
-	elseif kcd == 116	then return "t"
-	elseif kcd == 117	then return "u"
-	elseif kcd == 118	then return "v"
-	elseif kcd == 119	then return "w"
-	elseif kcd == 120	then return "x"
-	elseif kcd == 121	then return "y"
-	elseif kcd == 122	then return "z"
-	else
-		print("LS2008MP chat underfined char "..kcd)
-		return "?"
-	end
-end
-
 function handleUDPmessage(msg, msgIP, msgPort)
 	local p = split(msg, ';')
-	if p[1] == "chat" then
+	if p[1] == "chat" then --CLIENT print message on client
 		--[[print("LS2008MP chat message from " .. msgIP .. ":" .. msgPort ..  ": " .. p[2])
 		messageBy = ""
 		for i,plrip in ipairs(MPcurrPlayerIPList) do
@@ -288,34 +268,69 @@ function handleUDPmessage(msg, msgIP, msgPort)
 		]]--
 		printChat(p[2])
 		
-	elseif p[1] == "login" then --inform players that a new player has arrived and add him to player list
+	elseif p[1] == "login" then --SERVER broadcast that a new player has arrived and add him to player list
 		print("LS2008MP " .. p[2] .. " joined from " .. msgIP .. ":" .. msgPort)
-		handleUDPmessage("broadcast;"..p[2] .. " joined the game", msgIP, msgPort)
+		handleUDPmessage("broadcast;chat;"..p[2] .. " joined the game", msgIP, msgPort)
 		
 		MPcurrPlayerNameList[#MPcurrPlayerNameList+1] = p[2]
 		MPcurrPlayerIPList[#MPcurrPlayerIPList+1] = msgIP
 		MPcurrPlayerPortList[#MPcurrPlayerPortList+1] = msgPort
 		
-		MPudp:sendto("server;"..MPplayerName, msgIP, msgPort)
-	elseif p[1] == "server" then --return the player list to the new connected client
+		
+		playerList = ""
+		if #MPcurrPlayerNameList<=2 then
+			playerList = MPcurrPlayerNameList[1]
+		else
+			playerList = MPcurrPlayerNameList[1]
+			for i=2,#MPcurrPlayerNameList-1 do
+				playerList = playerList .. ", " .. MPcurrPlayerNameList[i]
+			end
+		end
+		MPudp:sendto("server;"..p[2], msgIP, msgPort)
+		
+	elseif p[1] == "server" then --CLIENT return the player list to the new connected client
 		print("LS2008MP you are playing with " .. p[2] .. " on server " .. msgIP .. ":" .. msgPort)
 		printChat("You are playing with " .. p[2])
 		
 		MPcurrPlayerNameList[#MPcurrPlayerNameList+1] = p[2]
 		MPcurrPlayerIPList[#MPcurrPlayerIPList+1] = msgIP
 		MPcurrPlayerPortList[#MPcurrPlayerPortList+1] = msgPort
-	elseif p[1] == "broadcast" then
+		
+	elseif p[1] == "broadcast" then --SERVER broadcast the message to all clients
 		print("LS2008MP " .. p[2] .. " broadcasted from " .. msgIP .. ":" .. msgPort)
-		printChat(p[2])
 		
 		for i,player in ipairs(MPcurrPlayerNameList) do
 			if i>1 then
-				MPudp:sendto("chat;"..p[2], MPcurrPlayerIPList[i], MPcurrPlayerPortList[i])
+				MPudp:sendto(string.sub(msg, 11), MPcurrPlayerIPList[i], MPcurrPlayerPortList[i])
 			end
 		end
+		handleUDPmessage(string.sub(msg, 11), MPip, MPport)
 		
-		--MPudp:sendto("server;"..MPplayerName, msgIP, msgPort)
+	elseif p[1] == "move" then --CLIENT recieve and move vehicle
+		--print("LS2008MP " .. p[2] .. " moved in " .. p[3] .. " x:" .. p[4]+0 .. " y:" .. p[5]+0 .. " z:" .. p[6]+0)
+		if MPplayerName ~= p[2] then
+			setTranslation(g_currentMission.vehicles[p[3]+0].rootNode, p[4]+0, p[5]+0, p[6]+0)
+		end
 		
+	elseif p[1] == "rot" then --CLIENT recieve and move vehicle
+		--print("LS2008MP " .. p[2] .. " rotated in " .. p[3] .. " x:" .. p[4]+0 .. " y:" .. p[5]+0 .. " z:" .. p[6]+0)
+		if MPplayerName ~= p[2] then
+			--local vehicleHeight = getTerrainHeightAtWorldPos(g_currentMission.terrainRootNode, p[4], 0,  p[6]);
+			--print(p[4])
+			--print(p[5])
+			--print(p[6])
+			setRotation(g_currentMission.vehicles[p[3]+0].rootNode, p[4]+0, p[5]+0, p[6]+0)
+			--local tempX, tempY, tempZ = getTranslation(g_currentMission.vehicles[p[3]+0].rootNode)
+			--print(tempX)
+			--print(tempY)
+			--print(tempZ)
+		end
+		
+	elseif p[1] == "moverot" then --CLIENT recieve and move vehicle
+		if MPplayerName ~= p[2] then
+			setTranslation(g_currentMission.vehicles[p[3]+0].rootNode, p[4]+0, p[5]+0, p[6]+0)
+			setRotation(g_currentMission.vehicles[p[3]+0].rootNode, p[7]+0, p[8]+0, p[9]+0)
+		end
 	else
 		print("LS2008MP undefined UDP message received from " .. msgIP .. ":" .. msgPort ..  ": " .. msg)
 	end
