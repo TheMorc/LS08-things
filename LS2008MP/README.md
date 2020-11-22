@@ -6,25 +6,25 @@ It's based on LuaSockets and a clever lua inject "technology" that is supposed t
 
 It's working somehow right now but it's still not all synced as it should and lacks many, many features.
 
-## List of things
+## List of things (not always up to date)
 | Function                  | Implemented | Working |
 |---------------------------|-------------|---------|
 | GUI buttons | yes | yes
 | Basic client/server connect | yes  | nearly flawlessly|
 | Server savegame sync | yes | yes |
 | Vehicle movement | yes | it's a bit laggy and jumpy
-| Game time and weather | yes | yes but no timescale (time drifting between clients)
+| Game time and weather | yes | yes
 | Player nicknames | yes | yes
 | Chat | yes | yes
 | Lights sync | yes | likes to skip a bit
 | Lowering implements | yes | yes
 | Attached implements update | yes | yes
-| Attaching implements | yes | pretty reliably
-| Trailer sync | partially | yes
+| Attaching and detaching implements | yes | pretty reliably
+| Attaching and detaching cutters | yes | yes
+| Attaching and detaching trailers | yes | yes
 | Combine pipe, lowering cutter etc | yes | yes
-| Trailer sync | yes | yes
-| Mission stats | partially | only money syncs
-| Basic sound sync | yes | but it's static
+| Mission stats | partially | only money is syncing
+| Basic sound sync | yes | but it's static(100% volume)
 | Refuel sync | not planned yet
 
 
