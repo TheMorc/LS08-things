@@ -15,6 +15,8 @@ MPplayerNameRndNums = false
 --render the text on top
 MPrenderDebugText = true
 
+--use the new LS2008 logo?
+MPuseNewLogo = true
 
 MPclientButtonPath = "data/menu/MP_client.png"
 MPserverButtonPath = "data/menu/MP_server.png"
