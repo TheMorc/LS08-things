@@ -35,4 +35,5 @@ It's working somehow right now but it's still not all synced as it should and la
 
 ### Some credits
 GIANTS Software for making LS2008 all those years ago
+
 people from Komeo's LS Mod Community and LS 2008 Creating Mods servers who helped testing and making this crazy project possible
