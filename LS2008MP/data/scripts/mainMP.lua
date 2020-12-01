@@ -193,7 +193,7 @@ function MPOnInGameMenuMenu()
 	if MPstate == "Client" then
 		server:send("logoff;"..MPplayerName)
 	else
-		handleUDPmessage("logoff;"..MPplayerName, MPip, MPport)
+		handleUDPmessage("logoff;"..MPplayerName)
 	end
 	
 	--original.OnInGameMenuMenu()
@@ -209,7 +209,8 @@ function MPclientMenuConnect()
     MPclientDir = gameMenuSystem.serverMenu:getSavegameDirectory(6);
 
     createFolder(MPclientDir);
-
+	
+	MPinitENet()
 	MPClientHeartbeat()
 end;
 function MPclientMenuConnContinue()
@@ -258,7 +259,7 @@ function MPonEnterVehicle(self, vehicle)
         	if MPstate == "Client" then
 				server:send("broadcast;enteredVehicle;"..MPplayerName..";"..i)
 			else
-				handleUDPmessage("broadcast;enteredVehicle;"..MPplayerName..";"..i, MPip, MPport)
+				handleUDPmessage("broadcast;enteredVehicle;"..MPplayerName..";"..i)
 			end
         end
     end
@@ -277,7 +278,7 @@ function MPonLeaveVehicle()
         	if MPstate == "Client" then
 				server:send("broadcast;leftVehicle;"..MPplayerName..";"..i)
 			else
-				handleUDPmessage("broadcast;leftVehicle;"..MPplayerName..";"..i, MPip, MPport)
+				handleUDPmessage("broadcast;leftVehicle;"..MPplayerName..";"..i)
 			end
         end
     end
@@ -359,7 +360,7 @@ function MPsyncAttachImplement(vehicle, object, index)
     		if MPstate == "Client" then
 				server:send("broadcast;attachImplement;"..MPplayerName..";"..i..";"..index)
 			else
-				handleUDPmessage("broadcast;attachImplement;"..MPplayerName..";"..i..";"..index, MPip, MPport)
+				handleUDPmessage("broadcast;attachImplement;"..MPplayerName..";"..i..";"..index)
 			end
         end 	
     end
@@ -368,7 +369,7 @@ function MPsyncDetachImplement(self, index)
 	if MPstate == "Client" then
 		server:send("broadcast;detachImplement;"..MPplayerName..";"..index)
 	else
-		handleUDPmessage("broadcast;detachImplement;"..MPplayerName..";"..index, MPip, MPport)
+		handleUDPmessage("broadcast;detachImplement;"..MPplayerName..";"..index)
 	end 	
 	
 	original.detachImplement(self, index)
@@ -382,7 +383,7 @@ function MPsyncAttachTrailer(self, trailer)
     		if MPstate == "Client" then
 				server:send("broadcast;attachTrailer;"..MPplayerName..";"..i)
 			else
-				handleUDPmessage("broadcast;attachTrailer;"..MPplayerName..";"..i, MPip, MPport)
+				handleUDPmessage("broadcast;attachTrailer;"..MPplayerName..";"..i)
 			end
         end 	
     end
@@ -391,7 +392,7 @@ function MPsyncDetachTrailer(self)
 	if MPstate == "Client" then
 		server:send("broadcast;detachTrailer;"..MPplayerName)
 	else
-		handleUDPmessage("broadcast;detachTrailer;"..MPplayerName, MPip, MPport)
+		handleUDPmessage("broadcast;detachTrailer;"..MPplayerName)
 	end 	
 	
 	original.handleDetachTrailerEvent(self)
@@ -404,7 +405,7 @@ function MPsyncAttachCutter(self, cutter)
     		if MPstate == "Client" then
 				server:send("broadcast;attachCutter;"..MPplayerName..";"..i)
 			else
-				handleUDPmessage("broadcast;attachCutter;"..MPplayerName..";"..i, MPip, MPport)
+				handleUDPmessage("broadcast;attachCutter;"..MPplayerName..";"..i)
 			end
         end 	
     end
@@ -413,7 +414,7 @@ function MPsyncDetachCurrentCutter(self)
 	if MPstate == "Client" then
 		server:send("broadcast;detachCurrentCutter;"..MPplayerName)
 	else
-		handleUDPmessage("broadcast;detachCurrentCutter;"..MPplayerName, MPip, MPport)
+		handleUDPmessage("broadcast;detachCurrentCutter;"..MPplayerName)
 	end 	
 	
 	original.detachCurrentCutter(self)
@@ -527,7 +528,7 @@ function MPvehicleUpdate(self, dt, isActive)
         					if MPstate == "Client" then
 								server:send("broadcast;vehEvent;lower;"..MPplayerName..";"..i)
 							else
-								handleUDPmessage("broadcast;vehEvent;lower;"..MPplayerName..";"..i, MPip, MPport)
+								handleUDPmessage("broadcast;vehEvent;lower;"..MPplayerName..";"..i)
 							end
 						end
 					end
@@ -537,7 +538,7 @@ function MPvehicleUpdate(self, dt, isActive)
         					if MPstate == "Client" then
 								server:send("broadcast;vehEvent;lights;"..MPplayerName..";"..i)
 							else
-								handleUDPmessage("broadcast;vehEvent;lights;"..MPplayerName..";"..i, MPip, MPport)
+								handleUDPmessage("broadcast;vehEvent;lights;"..MPplayerName..";"..i)
 							end
 						end
 					end
@@ -676,7 +677,7 @@ function MPcombineUpdate(self, dt, isActive)
         			if MPstate == "Client" then
 						server:send("broadcast;vehEvent;threshing;"..MPplayerName..";"..i)
 					else
-						handleUDPmessage("broadcast;vehEvent;threshing;"..MPplayerName..";"..i, MPip, MPport)
+						handleUDPmessage("broadcast;vehEvent;threshing;"..MPplayerName..";"..i)
 					end
 				end
 			end
@@ -686,7 +687,7 @@ function MPcombineUpdate(self, dt, isActive)
         			if MPstate == "Client" then
 						server:send("broadcast;vehEvent;pipe;"..MPplayerName..";"..i)
 					else
-						handleUDPmessage("broadcast;vehEvent;pipe;"..MPplayerName..";"..i, MPip, MPport)
+						handleUDPmessage("broadcast;vehEvent;pipe;"..MPplayerName..";"..i)
 					end
 				end
 			end
@@ -708,7 +709,7 @@ function MPploughUpdate(self, dt)
     			if MPstate == "Client" then
 					server:send("broadcast;ploughRot;"..MPplayerName..";"..i)
 				else
-					handleUDPmessage("broadcast;ploughRot;"..MPplayerName..";"..i, MPip, MPport)
+					handleUDPmessage("broadcast;ploughRot;"..MPplayerName..";"..i)
 				end
 			end
 		end
@@ -723,7 +724,7 @@ function MPsprayerUpdate(self, dt)
     			if MPstate == "Client" then
 					server:send("broadcast;sprayerActive;"..MPplayerName..";"..i)
 				else
-					handleUDPmessage("broadcast;sprayerActive;"..MPplayerName..";"..i, MPip, MPport)
+					handleUDPmessage("broadcast;sprayerActive;"..MPplayerName..";"..i)
 				end
 			end
 		end
@@ -738,7 +739,7 @@ function MPmowerUpdate(self, dt)
     			if MPstate == "Client" then
 					server:send("broadcast;mowerActive;"..MPplayerName..";"..i)
 				else
-					handleUDPmessage("broadcast;mowerActive;"..MPplayerName..";"..i, MPip, MPport)
+					handleUDPmessage("broadcast;mowerActive;"..MPplayerName..";"..i)
 				end
 			end
 		end
@@ -753,7 +754,7 @@ function MPtrailerAttachTrailer(self, trailer)
     			if MPstate == "Client" then
 					server:send("broadcast;trailerAttachTrailer;"..j..";"..i)
 				else
-					handleUDPmessage("broadcast;trailerAttachTrailer;"..j..";"..i, MPip, MPport)
+					handleUDPmessage("broadcast;trailerAttachTrailer;"..j..";"..i)
 				end
         	end 	
         end
@@ -766,7 +767,7 @@ function MPtoggleTipState(self)
     		if MPstate == "Client" then
 				server:send("broadcast;toggleTipState;"..MPplayerName..";"..i)
 			else
-				handleUDPmessage("broadcast;toggleTipState;"..MPplayerName..";"..i, MPip, MPport)
+				handleUDPmessage("broadcast;toggleTipState;"..MPplayerName..";"..i)
 			end
 		end
 	end
@@ -868,7 +869,7 @@ function MPupdate(dt)
 						if MPstate == "Client" then
 							server:send(UDPmoverot, 0, "unreliable")
 						else
-							handleUDPmessage(UDPmoverot, MPip, MPport)
+							handleUDPmessage(UDPmoverot)
 						end
 					end
 				end
@@ -1125,11 +1126,6 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
         			end
       			end
       		end
-			---if MPstate == "Client" then
-			--	server:send("broadcast;chat;"..MPplayerName.. ": " .. MPchatText)
-			--else
-			--	handleUDPmessage("broadcast;chat;"..MPplayerName.. ": " .. MPchatText, MPip, MPport)
-			--end
 			
 			MPchat = false
 			MPchatText = ""
@@ -1197,7 +1193,7 @@ function MPClientHeartbeat()
 			event.peer:send("login;".. MPplayerName)
     	elseif event.type == "receive" then
      		print("", event.data, event.peer)
-     		handleUDPmessage(event.data, MPip, MPport)
+     		handleUDPmessage(event.data)
      	elseif event.type == "disconnect" then
 			print("bye bye..", event.peer)
    		end
@@ -1208,7 +1204,7 @@ function MPServerHeartbeat()
   	if event then
   		if	event.type == "receive" then
     		print("", event.data, server)
-    		handleUDPmessage(event.data, MPip, MPport)
+    		handleUDPmessage(event.data)
    		elseif event.type == "disconnect" then
      		print("bye bye")
     	elseif event.type == "connect" then
@@ -1217,30 +1213,15 @@ function MPServerHeartbeat()
 end
 
 --the biggest function, the main sncer
-function handleUDPmessage(msg, msgIP, msgPort)
+function handleUDPmessage(msg)
 	local p = split(msg, ';')
 	if p[1] == "chat" then --CLIENT print message on client
 		print("[LS2008MP] chat: " .. p[2])
 		printChat(p[2])
 		
 	elseif p[1] == "server" then --CLIENT return the server host and player list to the new connected client
-		print("[LS2008MP] you are playing with " .. p[2] .. " on server " .. msgIP .. ":" .. msgPort)
-		--[[clientTCP:connect(MPip, MPport);
-		while true do
-    		local file, status, partial = clientTCP:receive()
-    		if file ~= nil then
-    			local receivedFile = split(file, ';')
-				print("[LS2008MP] receiving file ".. receivedFile[1])
-    			MPfileSave = assert(io.open(gameMenuSystem.quickPlayMenu:getSavegameDirectory(6).."/"..receivedFile[1], "wb"))
-				MPfileSave:write(b64dec(receivedFile[2]))
-    		end
-    		if status == "closed" then
-    			print("[LS2008MP] saying bye to the TCP file server :(") 
-				clientTCP:close();
-    			break
-    		end
-		end]]
-		
+		print("[LS2008MP] you are playing with " .. p[2] .. " on server")
+
 		MPaddToPlayerList(p[2]) --add serverhostplayer to the player list of the client
 		playerList = ""
 		if tonumber(p[3])<=2 then
@@ -1274,15 +1255,18 @@ function handleUDPmessage(msg, msgIP, msgPort)
 			setRotation(g_currentMission.vehicles[p[3]+0].rootNode, p[7]+0, p[8]+0, p[9]+0)
 			g_currentMission.vehicles[p[3]+0].movingDirection = 1
 		end	
+		
 	elseif p[1] == "playerConnecting" then
 		MPshowNewPlayerWarning = true
 		MPnewPlayerName = p[2]
 		MPticking = false
 		MPaddToPlayerList(p[2])
+		
 	elseif p[1] == "playerConnected" then
 		MPshowNewPlayerWarning = false
 		MPnewPlayerName = ""
 		MPticking = true
+		
 	elseif p[1] == "enteredVehicle" then --set current vehicle to entered
 		for i=1,#MPplayers do
 			if p[2] == MPplayers[i] then
@@ -1402,7 +1386,7 @@ function handleUDPmessage(msg, msgIP, msgPort)
 		for i=1,#MPplayers do
 			if MPplayers[i] == p[2] then
 				MPplayerVehicle[i] = "none"
-				MPchangeInPlayerList(i,"N/A","N/A",msgPort)
+				MPchangeInPlayerList(i,"N/A","N/A")
 			end
 		end
 	elseif p[1] == "broadcast" then --SERVER broadcast the message to all clients
@@ -1411,10 +1395,10 @@ function handleUDPmessage(msg, msgIP, msgPort)
         		peer:send(string.sub(msg, 11))
         	end
       	end
-		handleUDPmessage(string.sub(msg, 11), MPip, MPport)
+		handleUDPmessage(string.sub(msg, 11))
 	
 	elseif p[1] == "login" then --SERVER broadcast that a new player has arrived and add him to player list
-		print("[LS2008MP] " .. p[2] .. " joined from " .. msgIP .. ":" .. msgPort)
+		print("[LS2008MP] " .. p[2] .. " joined")
         setTextBold(true);
         g_currentMission.hudWarningBaseOverlay:render();
         renderText(0.07+0.022, 0.019+0.029, 0.035, "Syncing game data with " .. MPnewPlayerName .. "\n Please wait...");
@@ -1432,12 +1416,12 @@ function handleUDPmessage(msg, msgIP, msgPort)
 		if not wasPlayerNameThere then
 			MPplayers[#MPplayers+1] = p[2]
 			MPplayerVehicle[#MPplayerVehicle+1] = "none"
-			MPchangeInPlayerList(#MPplayers,p[2],msgIP,msgPort)
+			MPchangeInPlayerList(#MPplayers,p[2])
 		else
 			for i=1,#MPplayers do
 				if MPplayers[i] == p[2] then
 					MPplayerVehicle[i] = "none"
-					MPchangeInPlayerList(i,p[2],msgIP,msgPort)
+					MPchangeInPlayerList(i,p[2])
 				end
 			end
 		end
@@ -1470,23 +1454,12 @@ function handleUDPmessage(msg, msgIP, msgPort)
 		end
 		
 		--sending files
-		--[[MPtcpClient = MPtcp:accept()
-  		if MPtcpClient then
-  			for i,v in ipairs(MPsavegameFiles) do
-				MPfileLoad = assert(io.open(gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."/"..v, "rb"))
-				MPfileData = b64enc(MPfileLoad:read("*all"))
-				print("[LS2008MP] sending file " .. v .. " to client " .. msgIP .. ":" .. msgPort)
-				MPtcpClient:send(v .. ";" .. MPfileData .. "\r\n")
-			end	
-			MPtcpClient:close()
-    	end]]
-
-			for i,v in ipairs(MPsavegameFiles) do
-				MPfileLoad = assert(io.open(gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."/"..v, "rb"))
-				MPfileData = b64enc(MPfileLoad:read("*all"))
-				print("[LS2008MP] sending file " .. v .. " to client " .. msgIP .. ":" .. msgPort)
-				event.peer:send("savegameFile;" .. v .. ";" .. MPfileData)
-			end	
+		for i,v in ipairs(MPsavegameFiles) do
+			MPfileLoad = assert(io.open(gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."/"..v, "rb"))
+			MPfileData = b64enc(MPfileLoad:read("*all"))
+			print("[LS2008MP] sending file " .. v .. " to client")
+			event.peer:send("savegameFile;" .. v .. ";" .. MPfileData)
+		end	
 
     	
     elseif p[1] == "logoff" then
@@ -1503,15 +1476,15 @@ function handleUDPmessage(msg, msgIP, msgPort)
     elseif p[1] == "requestEntered" then --called from the new client to server to issue a enteredVehicle broadcast so that it can sync nametags
 		for i=1, table.getn(g_currentMission.vehicles) do
        		if g_currentMission.vehicles[i] == g_currentMission.currentVehicle then
-				handleUDPmessage("broadcast;enteredVehicle;"..MPplayerName..";"..i, MPip, MPport)
+				handleUDPmessage("broadcast;enteredVehicle;"..MPplayerName..";"..i)
 			end
 		end
 	elseif p[1] == "syncCurrentMissionToClient" then
-    	handleUDPmessage("broadcast;requestEntered;", MPip, MPport)
+    	handleUDPmessage("broadcast;requestEntered;")
     	event.peer:send("setCurrentMission;"..g_currentMission.environment.dayTime..";"..g_currentMission.environment.timeUntilNextRain..";"..g_currentMission.environment.nextRainType..";"..g_currentMission.missionStats.money..";"..g_currentMission.environment.timeScale)
     	
 	else
-		print("[LS2008MP] undefined UDP message(maybe older version of LS2008MP?) received from " .. msgIP .. ":" .. msgPort ..  ": " .. msg)
+		print("[LS2008MP] undefined UDP message(maybe older version of LS2008MP?) received: " .. msg)
 	end
 end
 
@@ -1545,10 +1518,8 @@ function MPaddToPlayerList(hisName)
 		end
 	end
 end
-function MPchangeInPlayerList(hisID,hisName,hisIP,hisPort)
+function MPchangeInPlayerList(hisID,hisName)
 	MPplayers[hisID] = hisName
-	MPplayerIPs[hisID] = hisIP
-	MPplayerPorts[hisID] = hisPort
 end
 
 --function used through the code to split and print a message to the chat

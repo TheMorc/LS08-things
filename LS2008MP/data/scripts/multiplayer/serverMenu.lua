@@ -250,6 +250,7 @@ function serverMenu:startSelectedGame()
     serverLoadingScreenMode();
 	MPinitSrvCli = false
 	MPenabled = not MPenabled
+	MPinitENet()
 end;
 
 function serverMenu:deleteSelectedGame()
