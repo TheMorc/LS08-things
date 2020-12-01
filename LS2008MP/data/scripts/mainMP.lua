@@ -9,17 +9,8 @@ isMPinjected = false
 MPversion = 0.09
 
 --LuaSocket stuff
-MPsocket = require("socket")
 enet = require "enet"
 MPip, MPport = "127.0.0.1", 2008 --temporary ip and port
-MPudp = socket.udp()
-MPudp:settimeout(0)
-MPcurrClientIP = "127.0.0.1"
-MPcurrClientPort = 0
-MPtcp = assert(socket.bind("*", 2008)) --it's fixed on port 2008 for now
-MPtcp:settimeout(10)
-clientTCP = assert(socket.tcp())
-clientTCP:settimeout(10)
 
 --MP server-client variables
 MPstate = "none"  --global state of MP used by functions
@@ -1176,73 +1167,52 @@ function MPfakeInputAxis(axis)
 	return 0
 end
 
---MP heartbeat functions for server and client
-function MPClientHeartbeat()
-	if not MPinitSrvCli then
-		MPinitSrvCli = true
-		print("[LS2008MP] starting client connection to " .. MPip .. ":" .. MPport)
-		--local translatedIP = socket.try(socket.dns.toip(MPip))
-		--MPudp:setpeername(MPip, MPport)
-		
-		
-		host = enet.host_create()
-		server = host:connect(MPip .. ":" .. MPport)
-		MPaddToPlayerList(MPplayerName)
-		MPchangeInPlayerList(#MPplayers,MPplayerName,"local",MPport)
-		
-	end
-	
-	--data = MPudp:receive()
-	--if data then
-	--	handleUDPmessage(data, MPip, MPport)
-	--end
-	
-	event = host:service(0)
-  	if event then
-    	if event.type == "connect" then
-    	  --print("Connected to", event.peer)
-    	  --server:send("hello world")
-			event.peer:send("login;".. MPplayerName)
-    	elseif event.type == "receive" then
-     	 print("", event.data, event.peer)
-     	 handleUDPmessage(event.data, MPip, MPport)
-     	elseif event.type == "disconnect" then
-     	 print("bye bye..", event.peer)
-     	 
-   		end
-  	end
-end
-function MPServerHeartbeat()
-	if not MPinitSrvCli then
+function MPinitENet()
+
+	if MPstate == "Server" then
 		MPinitSrvCli = true
 		print("[LS2008MP] starting server on port " .. MPport)
 		
 		host = enet.host_create("*:"..MPport)
-		--MPudp:setsockname("*", MPport)
+		MPaddToPlayerList(MPplayerName)
+		MPchangeInPlayerList(#MPplayers,MPplayerName,"local",MPport)
+	else 
+		MPinitSrvCli = true
+		print("[LS2008MP] starting client connection to " .. MPip .. ":" .. MPport)
+
+		host = enet.host_create()
+		server = host:connect(MPip .. ":" .. MPport)
 		MPaddToPlayerList(MPplayerName)
 		MPchangeInPlayerList(#MPplayers,MPplayerName,"local",MPport)
 	end
-
-	--data, msg_or_ip, port_or_nil = MPudp:receivefrom()
-	--print(data)
-	--if data then
-	--	MPcurrClientIP = msg_or_ip
-----	MPcurrClientPort = port_or_nil
-	--	handleUDPmessage(data, MPcurrClientIP, MPcurrClientPort)
-		--server:send("this is a server sending data to the client", msg_or_ip, port_or_nil)
-	--end
 	
+end
+
+--MP heartbeat functions for server and client
+function MPClientHeartbeat()
+
 	event = host:service(0)
   	if event then
-  	 if	event.type == "receive" then
-    	print("", event.data, server)
-    	
-    	handleUDPmessage(event.data, MPip, MPport)
-    elseif event.type == "disconnect" then
-     	 print("bye bye")
-    elseif event.type == "connect" then
-     	 --print("Hi " .. event.data)
-     	 end
+    	if event.type == "connect" then
+			event.peer:send("login;".. MPplayerName)
+    	elseif event.type == "receive" then
+     		print("", event.data, event.peer)
+     		handleUDPmessage(event.data, MPip, MPport)
+     	elseif event.type == "disconnect" then
+			print("bye bye..", event.peer)
+   		end
+  	end
+end
+function MPServerHeartbeat()
+	event = host:service(0)
+  	if event then
+  		if	event.type == "receive" then
+    		print("", event.data, server)
+    		handleUDPmessage(event.data, MPip, MPport)
+   		elseif event.type == "disconnect" then
+     		print("bye bye")
+    	elseif event.type == "connect" then
+     	end
   	end
 end
 
