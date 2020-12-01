@@ -6,7 +6,7 @@
 -- @date  10.11.2020 - 29.11.2020
 
 isMPinjected = false
-MPversion = "0.09.2 alpha"
+MPversion = "0.09.3 alpha"
 
 --LuaSocket stuff
 enet = require "enet"
@@ -257,9 +257,9 @@ function MPonEnterVehicle(self, vehicle)
 	for i=1, table.getn(g_currentMission.vehicles) do
         if g_currentMission.vehicles[i] == g_currentMission.currentVehicle then
         	if MPstate == "Client" then
-				server:send("broadcast;enteredVehicle;"..MPplayerName..";"..i)
+				server:send("bc1;enteredVehicle;"..MPplayerName..";"..i)
 			else
-				handleUDPmessage("broadcast;enteredVehicle;"..MPplayerName..";"..i)
+				handleUDPmessage("bc1;enteredVehicle;"..MPplayerName..";"..i)
 			end
         end
     end
@@ -276,9 +276,9 @@ function MPonLeaveVehicle()
     for i=1, table.getn(g_currentMission.vehicles) do
         if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
         	if MPstate == "Client" then
-				server:send("broadcast;leftVehicle;"..MPplayerName..";"..i)
+				server:send("bc1;leftVehicle;"..MPplayerName..";"..i)
 			else
-				handleUDPmessage("broadcast;leftVehicle;"..MPplayerName..";"..i)
+				handleUDPmessage("bc1;leftVehicle;"..MPplayerName..";"..i)
 			end
         end
     end
@@ -358,18 +358,18 @@ function MPsyncAttachImplement(vehicle, object, index)
 	for i=1, #g_currentMission.attachables do
       	if g_currentMission.attachables[i] == object then
     		if MPstate == "Client" then
-				server:send("broadcast;attachImplement;"..MPplayerName..";"..i..";"..index)
+				server:send("bc1;attachImplement;"..MPplayerName..";"..i..";"..index)
 			else
-				handleUDPmessage("broadcast;attachImplement;"..MPplayerName..";"..i..";"..index)
+				handleUDPmessage("bc1;attachImplement;"..MPplayerName..";"..i..";"..index)
 			end
         end 	
     end
 end
 function MPsyncDetachImplement(self, index)
 	if MPstate == "Client" then
-		server:send("broadcast;detachImplement;"..MPplayerName..";"..index)
+		server:send("bc1;detachImplement;"..MPplayerName..";"..index)
 	else
-		handleUDPmessage("broadcast;detachImplement;"..MPplayerName..";"..index)
+		handleUDPmessage("bc1;detachImplement;"..MPplayerName..";"..index)
 	end 	
 	
 	original.detachImplement(self, index)
@@ -381,18 +381,18 @@ function MPsyncAttachTrailer(self, trailer)
 	for i=1, #g_currentMission.trailers do
       	if g_currentMission.trailers[i] == trailer then
     		if MPstate == "Client" then
-				server:send("broadcast;attachTrailer;"..MPplayerName..";"..i)
+				server:send("bc1;attachTrailer;"..MPplayerName..";"..i)
 			else
-				handleUDPmessage("broadcast;attachTrailer;"..MPplayerName..";"..i)
+				handleUDPmessage("bc1;attachTrailer;"..MPplayerName..";"..i)
 			end
         end 	
     end
 end
 function MPsyncDetachTrailer(self)
 	if MPstate == "Client" then
-		server:send("broadcast;detachTrailer;"..MPplayerName)
+		server:send("bc1;detachTrailer;"..MPplayerName)
 	else
-		handleUDPmessage("broadcast;detachTrailer;"..MPplayerName)
+		handleUDPmessage("bc1;detachTrailer;"..MPplayerName)
 	end 	
 	
 	original.handleDetachTrailerEvent(self)
@@ -403,18 +403,18 @@ function MPsyncAttachCutter(self, cutter)
 	for i=1, #g_currentMission.cutters do
       	if g_currentMission.cutters[i] == cutter then
     		if MPstate == "Client" then
-				server:send("broadcast;attachCutter;"..MPplayerName..";"..i)
+				server:send("bc1;attachCutter;"..MPplayerName..";"..i)
 			else
-				handleUDPmessage("broadcast;attachCutter;"..MPplayerName..";"..i)
+				handleUDPmessage("bc1;attachCutter;"..MPplayerName..";"..i)
 			end
         end 	
     end
 end
 function MPsyncDetachCurrentCutter(self)
 	if MPstate == "Client" then
-		server:send("broadcast;detachCurrentCutter;"..MPplayerName)
+		server:send("bc1;detachCurrentCutter;"..MPplayerName)
 	else
-		handleUDPmessage("broadcast;detachCurrentCutter;"..MPplayerName)
+		handleUDPmessage("bc1;detachCurrentCutter;"..MPplayerName)
 	end 	
 	
 	original.detachCurrentCutter(self)
@@ -513,7 +513,7 @@ function MPvehicleUpdate(self, dt, isActive)
 				--[[if (self.lastSpeed*3600) >= 1 then
 					local tempTX, tempTY, tempTZ = getTranslation(self.rootNode)
 					local tempRX, tempRY, tempRZ = getRotation(self.rootNode)
-					UDPmoverot = "broadcast;moverot;"..MPplayerName.. ";" .. i..";"..(tempTX+0)..";"..(tempTY+0)..";"..(tempTZ+0) .. ";" ..(tempRX+0)..";"..(tempRY+0)..";"..(tempRZ+0)
+					UDPmoverot = "bc1;moverot;"..MPplayerName.. ";" .. i..";"..(tempTX+0)..";"..(tempTY+0)..";"..(tempTZ+0) .. ";" ..(tempRX+0)..";"..(tempRY+0)..";"..(tempRZ+0)
 					if MPstate == "Client" then
 						server:send(UDPmoverot)
 					else
@@ -526,9 +526,9 @@ function MPvehicleUpdate(self, dt, isActive)
             		for i=1, table.getn(g_currentMission.vehicles) do
         				if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
         					if MPstate == "Client" then
-								server:send("broadcast;vehEvent;lower;"..MPplayerName..";"..i)
+								server:send("bc1;vehEvent;lower;"..MPplayerName..";"..i)
 							else
-								handleUDPmessage("broadcast;vehEvent;lower;"..MPplayerName..";"..i)
+								handleUDPmessage("bc1;vehEvent;lower;"..MPplayerName..";"..i)
 							end
 						end
 					end
@@ -536,9 +536,9 @@ function MPvehicleUpdate(self, dt, isActive)
         	    	for i=1, table.getn(g_currentMission.vehicles) do
         				if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
         					if MPstate == "Client" then
-								server:send("broadcast;vehEvent;lights;"..MPplayerName..";"..i)
+								server:send("bc1;vehEvent;lights;"..MPplayerName..";"..i)
 							else
-								handleUDPmessage("broadcast;vehEvent;lights;"..MPplayerName..";"..i)
+								handleUDPmessage("bc1;vehEvent;lights;"..MPplayerName..";"..i)
 							end
 						end
 					end
@@ -675,9 +675,9 @@ function MPcombineUpdate(self, dt, isActive)
           	for i=1, table.getn(g_currentMission.vehicles) do
         		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
         			if MPstate == "Client" then
-						server:send("broadcast;vehEvent;threshing;"..MPplayerName..";"..i)
+						server:send("bc1;vehEvent;threshing;"..MPplayerName..";"..i)
 					else
-						handleUDPmessage("broadcast;vehEvent;threshing;"..MPplayerName..";"..i)
+						handleUDPmessage("bc1;vehEvent;threshing;"..MPplayerName..";"..i)
 					end
 				end
 			end
@@ -685,9 +685,9 @@ function MPcombineUpdate(self, dt, isActive)
         	for i=1, table.getn(g_currentMission.vehicles) do
         		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
         			if MPstate == "Client" then
-						server:send("broadcast;vehEvent;pipe;"..MPplayerName..";"..i)
+						server:send("bc1;vehEvent;pipe;"..MPplayerName..";"..i)
 					else
-						handleUDPmessage("broadcast;vehEvent;pipe;"..MPplayerName..";"..i)
+						handleUDPmessage("bc1;vehEvent;pipe;"..MPplayerName..";"..i)
 					end
 				end
 			end
@@ -707,9 +707,9 @@ function MPploughUpdate(self, dt)
     	for i=1, #g_currentMission.attachables do
       		if g_currentMission.attachables[i] == self then
     			if MPstate == "Client" then
-					server:send("broadcast;ploughRot;"..MPplayerName..";"..i)
+					server:send("bc1;ploughRot;"..MPplayerName..";"..i)
 				else
-					handleUDPmessage("broadcast;ploughRot;"..MPplayerName..";"..i)
+					handleUDPmessage("bc1;ploughRot;"..MPplayerName..";"..i)
 				end
 			end
 		end
@@ -722,9 +722,9 @@ function MPsprayerUpdate(self, dt)
     	for i=1, #g_currentMission.attachables do
       		if g_currentMission.attachables[i] == self then
     			if MPstate == "Client" then
-					server:send("broadcast;sprayerActive;"..MPplayerName..";"..i)
+					server:send("bc1;sprayerActive;"..MPplayerName..";"..i)
 				else
-					handleUDPmessage("broadcast;sprayerActive;"..MPplayerName..";"..i)
+					handleUDPmessage("bc1;sprayerActive;"..MPplayerName..";"..i)
 				end
 			end
 		end
@@ -737,9 +737,9 @@ function MPmowerUpdate(self, dt)
     	for i=1, #g_currentMission.attachables do
       		if g_currentMission.attachables[i] == self then
     			if MPstate == "Client" then
-					server:send("broadcast;mowerActive;"..MPplayerName..";"..i)
+					server:send("bc1;mowerActive;"..MPplayerName..";"..i)
 				else
-					handleUDPmessage("broadcast;mowerActive;"..MPplayerName..";"..i)
+					handleUDPmessage("bc1;mowerActive;"..MPplayerName..";"..i)
 				end
 			end
 		end
@@ -752,9 +752,9 @@ function MPtrailerAttachTrailer(self, trailer)
 		for j=1, #g_currentMission.trailers do
       		if g_currentMission.trailers[i] == trailer and g_currentMission.trailers[j] == self then
     			if MPstate == "Client" then
-					server:send("broadcast;trailerAttachTrailer;"..j..";"..i)
+					server:send("bc1;trailerAttachTrailer;"..j..";"..i)
 				else
-					handleUDPmessage("broadcast;trailerAttachTrailer;"..j..";"..i)
+					handleUDPmessage("bc1;trailerAttachTrailer;"..j..";"..i)
 				end
         	end 	
         end
@@ -765,9 +765,9 @@ function MPtoggleTipState(self)
     for i=1, #g_currentMission.trailers do
       	if g_currentMission.trailers[i] == self then
     		if MPstate == "Client" then
-				server:send("broadcast;toggleTipState;"..MPplayerName..";"..i)
+				server:send("bc1;toggleTipState;"..MPplayerName..";"..i)
 			else
-				handleUDPmessage("broadcast;toggleTipState;"..MPplayerName..";"..i)
+				handleUDPmessage("bc1;toggleTipState;"..MPplayerName..";"..i)
 			end
 		end
 	end
@@ -898,7 +898,7 @@ function MPupdate(dt)
 					if g_currentMission.vehicles[i].isEntered and (g_currentMission.vehicles[i].lastSpeed*3600) >= 1 then
 						local tempTX, tempTY, tempTZ = getTranslation(g_currentMission.vehicles[i].rootNode)
 						local tempRX, tempRY, tempRZ = getRotation(g_currentMission.vehicles[i].rootNode)
-						UDPmoverot = "broadcast;moverot;".."".. ";" .. i..";"..(round(tempTX+0,2))..";"..(round(tempTY+0,2))..";"..(round(tempTZ+0,2)) .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
+						UDPmoverot = "bc2;moverot;".."".. ";" .. i..";"..(round(tempTX+0,2))..";"..(round(tempTY+0,2))..";"..(round(tempTZ+0,2)) .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
 						if MPstate == "Client" then
 							server:send(UDPmoverot, 0, "unreliable")
 						else
@@ -1143,11 +1143,11 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
 			InputBinding.hasEvent = original.hasEvent
 			getInputAxis = original.getInputAxis
 			if MPstate == "Client" then
-				server:send("broadcast;chat;"..MPplayerName.. ": " .. MPchatText)
+				server:send("bc1;chat;"..MPplayerName.. ": " .. MPchatText)
 			else
 				for id, peer in pairs(MPpeerList) do
         			if id ~= MPplayerName then
-          				peer:send("broadcast;chat;"..MPplayerName.. ": " .. MPchatText)
+          				peer:send("bc1;chat;"..MPplayerName.. ": " .. MPchatText)
         			end
       			end
       		end
@@ -1271,7 +1271,7 @@ function handleUDPmessage(msg)
 		if p[2] == "z_MPfake.file" then
 			MPclientMenuConnContinue()
 			printChat("You are playing with " .. playerList) --print the new composed string
-			server:send("broadcast;playerConnected;"..MPplayerName) --unfreezing the game
+			server:send("bc1;playerConnected;"..MPplayerName) --unfreezing the game
 		end
 		
 	elseif p[1] == "moverot" then --CLIENT recieve and move vehicle
@@ -1415,22 +1415,34 @@ function handleUDPmessage(msg)
 				MPchangeInPlayerList(i,"N/A","N/A")
 			end
 		end
-	elseif p[1] == "broadcast" then --SERVER broadcast the message to all clients
+	elseif p[1] == "bc1" then --reliable
 		for id, peer in pairs(MPpeerList) do
         	if id ~= MPplayerName then
-        		peer:send(string.sub(msg, 11))
+        		peer:send(string.sub(msg, 5))
         	end
       	end
-		handleUDPmessage(string.sub(msg, 11))
-	
+		handleUDPmessage(string.sub(msg, 5))
+	elseif p[1] == "bc2" then --unreliable
+		for id, peer in pairs(MPpeerList) do
+        	if id ~= MPplayerName then
+        		peer:send(string.sub(msg, 5), 0, "unreliable")
+        	end
+      	end
+		handleUDPmessage(string.sub(msg, 5))
+	elseif p[1] == "bc3" then --unreliable without server
+		for id, peer in pairs(MPpeerList) do
+        	if id ~= MPplayerName then
+        		peer:send(string.sub(msg, 5), 0, "unreliable")
+        	end
+      	end
 	elseif p[1] == "login" then --SERVER broadcast that a new player has arrived and add him to player list
 		print("[LS2008MP] " .. p[2] .. " joined")
         setTextBold(true);
         g_currentMission.hudWarningBaseOverlay:render();
         renderText(0.07+0.022, 0.019+0.029, 0.035, "Syncing game data with " .. MPnewPlayerName .. "\n Please wait...");
         setTextBold(false);
-		handleUDPmessage("broadcast;chat;"..p[2] .. " joined the game")
-		handleUDPmessage("broadcast;playerConnecting;"..p[2])
+		handleUDPmessage("bc1;chat;"..p[2] .. " joined the game")
+		handleUDPmessage("bc1;playerConnecting;"..p[2])
 		
 		wasPlayerNameThere = false
 		for i=1,#MPplayers do
@@ -1474,21 +1486,21 @@ function handleUDPmessage(msg)
     	print("[LS2008MP] " .. p[2] .. "left the server.. :(")
     	
     	if p[2] ~= MPplayerName then
-    		handleUDPmessage("broadcast;chat;"..p[2] .. " left the game")
+    		handleUDPmessage("bc1;chat;"..p[2] .. " left the game")
     	else
-    		handleUDPmessage("broadcast;chat;"..p[2] .. " was your server host and left the game, so you can now peacefully leave too.. :(")
+    		handleUDPmessage("bc1;chat;"..p[2] .. " was your server host and left the game, so you can now peacefully leave too.. :(")
     	end
     	
-    	handleUDPmessage("broadcast;playerDisconnected;" .. p[2])
+    	handleUDPmessage("bc1;playerDisconnected;" .. p[2])
 		
     elseif p[1] == "requestEntered" then --called from the new client to server to issue a enteredVehicle broadcast so that it can sync nametags
 		for i=1, table.getn(g_currentMission.vehicles) do
        		if g_currentMission.vehicles[i] == g_currentMission.currentVehicle then
-				handleUDPmessage("broadcast;enteredVehicle;"..MPplayerName..";"..i)
+				handleUDPmessage("bc1;enteredVehicle;"..MPplayerName..";"..i)
 			end
 		end
 	elseif p[1] == "syncCurrentMissionToClient" then
-    	handleUDPmessage("broadcast;requestEntered;")
+    	handleUDPmessage("bc1;requestEntered;")
     	event.peer:send("setCurrentMission;"..g_currentMission.environment.dayTime..";"..g_currentMission.environment.timeUntilNextRain..";"..g_currentMission.environment.nextRainType..";"..g_currentMission.missionStats.money..";"..g_currentMission.environment.timeScale)
     	
 	else
