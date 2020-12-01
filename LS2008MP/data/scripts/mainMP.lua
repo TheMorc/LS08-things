@@ -6,7 +6,7 @@
 -- @date  10.11.2020 - 29.11.2020
 
 isMPinjected = false
-MPversion = 0.09
+MPversion = "0.09.2 alpha"
 
 --LuaSocket stuff
 enet = require "enet"
@@ -848,6 +848,39 @@ function MPupdate(dt)
 	
 			MPHeartbeat()
     	
+    		if MPupdateTick2 == 30 then
+				if not MPoneTimeUpdateDone and gameMenuSystem.loadScreen.isLoaded then
+						MPoneTimeUpdate()
+				end
+				
+				if MPserverPASG then
+					MPserverPASG = false
+					--saving the game before sending data
+					gameMenuSystem.serverMenu:saveSelectedGame();
+					copyFile(gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."/wheat_density.png", gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."/z_MPfake.file", false);
+		
+					--preparing file list
+					dircmd = string.gsub("dir \""..gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."\"", "/", "\\")
+					os.execute(dircmd .. " /b > .MPfileList")
+					local MPsavegameFiles = {}
+					for f in io.lines(".MPfileList") do
+    					MPsavegameFiles[#MPsavegameFiles+1] = f
+					end
+		
+					--sending files
+					for i,v in ipairs(MPsavegameFiles) do
+						MPfileLoad = assert(io.open(gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."/"..v, "rb"))
+						MPfileData = b64enc(MPfileLoad:read("*all"))
+						print("[LS2008MP] sending file " .. v .. " to client")
+						MPserverPASGpeer:send("savegameFile;" .. v .. ";" .. MPfileData)
+					end	
+				end
+				
+				MPupdateTick2 = 0
+					--print("peers:" .. host:get_socket_address())
+			end
+			MPupdateTick2 = MPupdateTick2 + 1
+    	
 			if not MPticking then
 				g_currentMission.isRunning = false
 				return
@@ -877,16 +910,8 @@ function MPupdate(dt)
 				MPupdateTick1 = 0
 			end
 			
-			if MPupdateTick2 == 60 then
-				if not MPoneTimeUpdateDone and gameMenuSystem.loadScreen.isLoaded then
-						MPoneTimeUpdate()
-				end
-				
-				MPupdateTick2 = 0
-					--print("peers:" .. host:get_socket_address())
-			end
-			MPupdateTick2 = MPupdateTick2 + 1
 			MPupdateTick1 = MPupdateTick1 + 1
+
 		end
 	end
 	
@@ -993,9 +1018,9 @@ end
 function MPdraw()
 	
 	setTextBold(true);
-	local MPgameText = "LS2008MP v" .. MPversion .. " alpha"
+	local MPgameText = "LS2008MP v" .. MPversion
 	if MPrenderDebugText == true then
-		MPgameText = "LS2008MP v" .. MPversion .. " alpha | " .. MPstate .. " | Running: " .. tostring(MPinitSrvCli) .. " | Name: " .. MPplayerName
+		MPgameText = "LS2008MP v" .. MPversion .. " | " .. MPstate .. " | Running: " .. tostring(MPinitSrvCli) .. " | Name: " .. MPplayerName
 		renderText(0.0, 0.96, 0.02, "IP: " .. MPip .. ":" .. MPport);
 	end
 	renderText(0.0, 0.98, 0.02, MPgameText);
@@ -1163,6 +1188,7 @@ function MPfakeInputAxis(axis)
 	return 0
 end
 
+--function to init enet
 function MPinitENet()
 
 	if MPstate == "Server" then
@@ -1441,26 +1467,8 @@ function handleUDPmessage(msg)
 		--sending game data
 		--be prepared for crazy things and workarounds...
 
-		--saving the game before sending data
-		gameMenuSystem.serverMenu:saveSelectedGame();
-		copyFile(gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."/wheat_density.png", gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."/z_MPfake.file", false);
-		
-		--preparing file list
-		dircmd = string.gsub("dir \""..gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."\"", "/", "\\")
-		os.execute(dircmd .. " /b > .MPfileList")
-		local MPsavegameFiles = {}
-		for f in io.lines(".MPfileList") do
-    		MPsavegameFiles[#MPsavegameFiles+1] = f
-		end
-		
-		--sending files
-		for i,v in ipairs(MPsavegameFiles) do
-			MPfileLoad = assert(io.open(gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."/"..v, "rb"))
-			MPfileData = b64enc(MPfileLoad:read("*all"))
-			print("[LS2008MP] sending file " .. v .. " to client")
-			event.peer:send("savegameFile;" .. v .. ";" .. MPfileData)
-		end	
-
+		MPserverPASG = true
+		MPserverPASGpeer = event.peer
     	
     elseif p[1] == "logoff" then
     	print("[LS2008MP] " .. p[2] .. "left the server.. :(")
