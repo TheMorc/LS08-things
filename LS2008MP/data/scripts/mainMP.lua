@@ -6,7 +6,7 @@
 -- @date  10.11.2020 - 29.11.2020
 
 isMPinjected = false
-MPversion = "0.09.3 alpha"
+MPversion = "0.09.4 alpha"
 
 --LuaSocket stuff
 enet = require "enet"
@@ -51,19 +51,8 @@ MPclientDir = ""
 MPshowNewPlayer = false
 MPnewPlayerName = ""
 
---original functions from game
-original = {  --(they are replaced with functions from this injector but a copy is left here because they are used in the code)
-	 drawing = draw,
-	 update = update,
-	 keyEvent = keyEvent,
-	 playerUpdate = nil,
-	 vehicleUpdate = nil,
-	 attachImplement = nil,
-	 detachImplement = nil,
-	 attachTrailer = nil,
-	 attachCutter = nil,
-	 detachCurrentCutter = nil
-}
+--table for original functions from main.lua
+original = {}
 
 --MP main function used to inject main.lua
 function init()
@@ -337,13 +326,9 @@ function MPtoggleVehicle(self)
             if index > numVehicles then
                 index = 1;
             end;
-            for i=1,#MPplayerVehicle do
-				if MPplayerVehicle[i] == "none" then
-            		if not self.vehicles[index].isBroken or index == oldIndex then
-            		    found = true;
-            		end;
-            	end	
-            end
+            if not self.vehicles[index].isBroken and not self.vehicles[index].MPsitting or index == oldIndex then
+                found = true;
+            end;
         end;
 
         self:onEnterVehicle(self.vehicles[index]);
@@ -850,9 +835,17 @@ function MPupdate(dt)
     	
     		if MPupdateTick2 == 30 then
 				if not MPoneTimeUpdateDone and gameMenuSystem.loadScreen.isLoaded then
-						MPoneTimeUpdate()
+						MPoneTimeUpdateDone = true
+						if MPstate == "Client" then 
+							server:send("syncCurrentMissionToClient;")
+							print("[LS2008MP] current mission sync requested")
+							MPmodifyVehicleScripts()
+						else 
+							MPmodifyVehicleScripts()
+						end
 				end
 				
+				--continuation for login message of the client
 				if MPserverPASG then
 					MPserverPASG = false
 					--saving the game before sending data
@@ -877,7 +870,6 @@ function MPupdate(dt)
 				end
 				
 				MPupdateTick2 = 0
-					--print("peers:" .. host:get_socket_address())
 			end
 			MPupdateTick2 = MPupdateTick2 + 1
     	
@@ -918,16 +910,6 @@ function MPupdate(dt)
 	
 	original.update(dt)
 	
-end
-function MPoneTimeUpdate()
-	MPoneTimeUpdateDone = true
-	if MPstate == "Client" then 
-		server:send("syncCurrentMissionToClient;")
-		print("[LS2008MP] current mission sync requested")
-		MPmodifyVehicleScripts()
-	else 
-		MPmodifyVehicleScripts()
-	end
 end
 
 --MP modify vehicle scripts, function called from MPoneTimeUpdate, function that also handles client sync
@@ -1218,10 +1200,10 @@ function MPClientHeartbeat()
     	if event.type == "connect" then
 			event.peer:send("login;".. MPplayerName)
     	elseif event.type == "receive" then
-     		print("", event.data, event.peer)
+     		--print("", event.data, event.peer)
      		handleUDPmessage(event.data)
      	elseif event.type == "disconnect" then
-			print("bye bye..", event.peer)
+			print("bye bye.. the server died", event.peer)
    		end
   	end
 end
@@ -1229,10 +1211,10 @@ function MPServerHeartbeat()
 	event = host:service(0)
   	if event then
   		if	event.type == "receive" then
-    		print("", event.data, server)
+    		--print("", event.data, server)
     		handleUDPmessage(event.data)
    		elseif event.type == "disconnect" then
-     		print("bye bye")
+     		print("bye bye, someone has left the game")
     	elseif event.type == "connect" then
      	end
   	end
@@ -1475,12 +1457,14 @@ function handleUDPmessage(msg)
 		end
 		event.peer:send("server;"..MPplayerName..";"..#MPplayers..";"..playerList)--send the raw player list to the new client
 		MPpeerList[tostring(event.peer:connect_id())] = event.peer
+		
 		--now comes the fun part, it's called
 		--sending game data
 		--be prepared for crazy things and workarounds...
 
 		MPserverPASG = true
 		MPserverPASGpeer = event.peer
+		--continues in MPupdateTick2 part of MPupdate
     	
     elseif p[1] == "logoff" then
     	print("[LS2008MP] " .. p[2] .. "left the server.. :(")
