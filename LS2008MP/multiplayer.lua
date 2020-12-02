@@ -18,6 +18,9 @@ MPrenderDebugText = true
 --use the new LS2008 logo?
 MPuseNewLogo = true
 
+--chat key binding (either ASCII key numbers or look in InputBindings.xml or /shared/scripts/foundation/input.lua)
+MPchatKey = Input.KEY_t
+
 MPclientButtonPath = "data/menu/MP_client.png"
 MPserverButtonPath = "data/menu/MP_server.png"
 MPmainMenuButtonsText = false
