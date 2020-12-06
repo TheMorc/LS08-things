@@ -143,7 +143,7 @@ function serverMenu:render()
 
     self.selectedOverlay:setPosition(self.spacingLeft, self.selectedPositionBase+(4-self.selectedIndex+(self.startIndex-1))*(self.imageSpacing+self.imageSize));
 
-    local numSavegames = table.getn(self.savegames);
+    local numSavegames = 5;
     for i=1, table.getn(self.overlays) do
         self.overlays[i]:render();
         
@@ -158,10 +158,6 @@ function serverMenu:render()
         overlay:setPosition(self.spacingLeft + 0.015, 1 - (self.spacingTop+(self.imageSize+self.imageSpacing)*(i-self.startIndex) + self.imageSize));
         overlay:render();
 
-        if g_isDemo then
-            self.demoLockedOverlay:setPosition(self.spacingLeft + 0.015, 1 - (self.spacingTop+(self.imageSize+self.imageSpacing)*(i-self.startIndex) + self.imageSize));
-            self.demoLockedOverlay:render();
-        end;
 
         local savegameName = g_i18n:getText("Savegame") .. " " .. i;
 
@@ -202,7 +198,7 @@ function serverMenu:addButton(overlayButton)
 end;
 
 function serverMenu:setSelectedIndex(index)
-    local numSavegames = table.getn(self.savegames);
+    local numSavegames = 5;
     self.selectedIndex = math.max(math.min(index, numSavegames), 1);
 
     if self.selectedIndex > self.startIndex+3 then
@@ -250,6 +246,7 @@ function serverMenu:startSelectedGame()
     serverLoadingScreenMode();
 	MPinitSrvCli = false
 	MPenabled = not MPenabled
+	setCaption("LS2008MP v" .. MPversion .. " | Server | ".. MPplayerName)
 end;
 
 function serverMenu:deleteSelectedGame()
