@@ -76,12 +76,19 @@ function serverLoading:render()
         setTextBold(true);
         --setTextColor(0,0,0,1);
         
-        --local str = "Mission wird geladen, bitte warten ...";
-        local str = g_i18n:getText("Mission_is_loading_please_wait");
+        local str = ""
+        if g_i18n ~= nil then
+        	str = g_i18n:getText("Mission_is_loading_please_wait");
+        else
+        	str = "Mission wird geladen, bitte warten ...";
+        end
         local offset = 0;
         if self.missionId == 0 then
-            --str = "Spiel wird geladen, bitte warten ...";
-            str = g_i18n:getText("Game_is_loading_please_wait");
+        	if g_i18n ~= nil then
+        		str = g_i18n:getText("Game_is_loading_please_wait");
+        	else
+        		str = "Spiel wird geladen, bitte warten ...";
+        	end
             offset = 0.01;
         end;
         

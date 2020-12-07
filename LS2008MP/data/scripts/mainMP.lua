@@ -3,9 +3,9 @@
 -- beware!, this is an incredible spaghetti code and although it works somehow i just don't recommend even trying to touch it
 -- because it may break out of sudden and not a single person will ever fix it. 
 -- @author  Richard Gráčik (mailto:r.gracik@gmail.com)
--- @date  10.11.2020 - 6.12.2020
+-- @date  10.11.2020 - 7.12.2020
 
-isMPinjected = false
+MPloaded = false
 MPversion = "0.11 luasockets"
 
 --LuaSocket stuff
@@ -76,6 +76,7 @@ function init()
 	original.hasEvent = InputBinding.hasEvent
 	original.getInputAxis = getInputAxis
 	original.OnInGameMenuMenu = OnInGameMenuMenu
+	original.loadVehicle = BaseMission.loadVehicle
 	
 	--rewrite update and draw functions with MP versions
 	update = MPupdate
@@ -87,8 +88,8 @@ function init()
 	BaseMission.toggleVehicle = MPtoggleVehicle
 	OnInGameMenuMenu = MPOnInGameMenuMenu
 	InGameMenu.render = MPInGameMenuRender
+	BaseMission.loadVehicle = MPloadVehicle
 		
-	isMPinjected = true --done!
 	print("[LS2008MP] main.lua injector - finished")
 	
 	print("[LS2008MP] loading multiplayer settings")
@@ -162,6 +163,7 @@ function init()
 	consoleBackground = Overlay:new("GUIMPsettingsBackground", "data/menu/settings_background.png", 0, 0.47, 1, 0.53);
 	
 	print("[LS2008MP v" .. MPversion .. "] initialized successfully, hooray!") 	
+	MPloaded = true
 	setCaption("LS2008MP v" .. MPversion)
 end
 
@@ -220,6 +222,24 @@ function MPOnInGameMenuMenu()
 	restartApplication()
 end
 function MPclientMenuConnect()
+	if string.len(MPplayerName) == 0 then
+		print("[LS2008MP] uh oh, empty player name...")
+		printChat("Uh oh, you don't have any player name.")
+		return
+	end
+	
+	if string.len(MPip) == 0 then
+		print("[LS2008MP] uh oh, empty IP...")
+		printChat("Uh oh, you don't have any IP address to connect to.")
+		return
+	end
+	
+	if string.len(MPport) == 0 then
+		print("[LS2008MP] uh oh, empty port...")
+		printChat("Uh oh, you don't have any port.")
+		return
+	end
+	
 	gameMenuSystem.MPsettingsMenu.items[6] = Overlay:new("GUIMPsettingsBackground", "data/missions/hud_mission_base.png", MPsettingsMenuxPos, 0.02, 0.15, 0.06)
 	MPinitSrvCli = false
 	MPenabled = true
@@ -889,13 +909,13 @@ end
 function MPmission00Update(self, dt)
 	Mission00:superClass().update(self, dt);
 
-    if self.environment.dayTime > 20*60*60*1000 or self.environment.dayTime < 6*60*60*1000 then
+    --[[if self.environment.dayTime > 20*60*60*1000 or self.environment.dayTime < 6*60*60*1000 then
         -- timescale night
         self.environment.timeScale = g_settingsTimeScale;
     else
         -- timescale day
         self.environment.timeScale = g_settingsTimeScale/4;
-    end;
+    end;]]
     
     
     --the only part of the code that needed to be modified (but i'm still not sure if it won't break with ModAgri)
@@ -943,9 +963,7 @@ function MPupdate(dt)
 				MPinitSrvCli = false
 				MPenabled = false
 			end
-		end
-	
-		if g_currentMission ~= nil then
+		elseif g_currentMission ~= nil then
 			
 			MPHeartbeat()
     		
@@ -1154,6 +1172,54 @@ function MPmodifyVehicleScripts()
 	print("[LS2008MP] script modification finished")
 end
 
+--BaseMission loadVehicle function but with support for original game
+function MPloadVehicle(self, filename, x, yOffset, z, yRot)
+	local xmlFile = loadXMLFile("TempConfig", filename);
+    local typeName = getXMLString(xmlFile, "vehicle#type");
+    delete(xmlFile);
+    local ret = nil;
+    if typeName == nil then
+        print("Error loadVehicle: invalid vehicle config file '"..filename.."', no type specified");
+    else
+        local typeDef = g_vehicleTypes[typeName];
+        if typeDef == nil then
+            print("Error loadVehicle: unknown type '"..typeName.."' in '"..filename.."'");
+        else
+            local callString = "vehicle = " .. typeDef.className .. ":new(\""..filename.."\", "..x..", "..yOffset..", "..z..", "..yRot..");";
+            loadstring(callString)();
+            if vehicle ~= nil then
+                if typeDef.intern == "implements" then
+                    table.insert(self.attachables, vehicle);
+                elseif typeDef.intern == "steerables" then
+                    table.insert(self.vehicles, vehicle);
+                elseif typeDef.intern == "trailers" then
+                    table.insert(self.trailers, vehicle);
+                    self.objectToTrailer[vehicle.rootNode] = vehicle;
+                elseif typeDef.intern == "cutters" then
+                    table.insert(self.cutters, vehicle);
+                end;
+            end;
+            ret = vehicle;
+            if ret.configFileName == nil then
+            	 ret.configFileName = filename
+            	 print("[LS2008MP] seems like the original game, adding configFileName to vehicle " .. filename)
+            end
+            if ret.setWorldPosition == nil then
+            	ret.setWorldPosition = MPvehiclesetWorldPosition
+            	print("[LS2008MP] also adding setWorldPosition to vehicle " .. filename)
+            end
+            vehicle = nil;
+        end;
+    end;
+    return ret;
+end
+
+--setWorldPosition for original game
+function MPvehiclesetWorldPosition(self, x, y, z, xRot, yRot, zRot)
+	setTranslation(self.rootNode, x,y,z);
+    setRotation(self.rootNode, xRot,yRot,zRot);
+end
+
 --modified in game menu render function to fix saving and remove save for client
 function MPInGameMenuRender(self)
 	if self.extraOverlay ~= nil then
@@ -1286,34 +1352,37 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
 	--client/settings menu key handling
 	if gameMenuSystem.currentMenu == gameMenuSystem.MPsettingsMenu then
 		if MPsettingsMenuSelected == "name" and isDown then
-			if sym == 8 then --backspace
-				MPplayerName = string.sub(MPplayerName,1, -2)
-				return
-			elseif sym == Input.KEY_return then
+			if sym == Input.KEY_return then
 				MPsettingsMenuSelected = ""
-			else --nothing from above, lets assume it is a normal letter and deSDLify it
-				MPplayerName = MPplayerName .. string.char(sym)
-				return
+			elseif 32 < unicode and unicode < 127 then 
+			MPplayerName = MPplayerName..string.char(unicode)
+			end
+			if sym == 8 then
+				if MPplayerName:len() >= 1 then
+					MPplayerName= MPplayerName:sub(1,MPplayerName:len() - 1)
+				end
 			end
 		elseif MPsettingsMenuSelected == "ip" and isDown then
-			if sym == 8 then --backspace
-				MPip = string.sub(MPip,1, -2)
-				return
-			elseif sym == Input.KEY_return then
+			if sym == Input.KEY_return then
 				MPsettingsMenuSelected = ""
-			else --nothing from above, lets assume it is a normal letter and deSDLify it
-				MPip = MPip .. string.char(sym)
-				return
+			elseif 32 < unicode and unicode < 127 then 
+			MPip = MPip..string.char(unicode)
+			end
+			if sym == 8 then
+				if MPip:len() >= 1 then
+					MPip = MPip:sub(1,MPip:len() - 1)
+				end
 			end
 		elseif MPsettingsMenuSelected == "port" and isDown then
-			if sym == 8 then --backspace
-				MPport = string.sub(MPport,1, -2)
-				return
-			elseif sym == Input.KEY_return then
+			if sym == Input.KEY_return then
 				MPsettingsMenuSelected = ""
-			else --nothing from above, lets assume it is a normal letter and deSDLify it
-				MPport = MPport .. string.char(sym)
-				return
+			elseif 32 < unicode and unicode < 127 then 
+			MPport = MPport..string.char(unicode)
+			end
+			if sym == 8 then
+				if tostring(MPport):len() >= 1 then
+					MPport = tostring(MPport):sub(1,tostring(MPport):len() - 1)
+				end
 			end
 		end
 	end
@@ -1360,7 +1429,6 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
 	if not MPchat then
 		original.keyEvent(unicode, sym, modifier, isDown) --it's handling TAB, ESC and PDA but not input bindings for some weird reason, those are in update functions..
 	end
-	
 end
 
 --fake InputBinding hasEvent and getInputAxis functions for chat

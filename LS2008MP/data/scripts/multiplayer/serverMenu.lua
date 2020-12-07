@@ -81,8 +81,15 @@ function serverMenu:new(backgroundOverlay)
     xPos = xPos + instance.buttonWidth+instance.backPlayButtonSpacing;
 
     instance:addButton(OverlayButton:new(Overlay:new("delete_button", "data/menu/delete_button".. g_languageSuffix .. ".png", buttonSpacingSide, instance.backPlayButtonSpacing, instance.buttonWidth, instance.buttonHeight), OnserverMenuDelete));
-    instance:addButton(OverlayButton:new(Overlay:new("reset_vehicles_button", "data/menu/reset_vehicles_button".. g_languageSuffix .. ".png", buttonSpacingSide+instance.buttonWidth+instance.backPlayButtonSpacing, instance.backPlayButtonSpacing, instance.largeButtonWidth, instance.buttonHeight), OnserverMenuResetVehicles));
-
+    
+   	local f=io.open("data/menu/reset_vehicles_button".. g_languageSuffix .. ".png","r")
+   	if f~=nil then
+   		io.close(f)
+   		instance:addButton(OverlayButton:new(Overlay:new("reset_vehicles_button", "data/menu/reset_vehicles_button".. g_languageSuffix .. ".png", buttonSpacingSide+instance.buttonWidth+instance.backPlayButtonSpacing, instance.backPlayButtonSpacing, instance.largeButtonWidth, instance.buttonHeight), OnserverMenuResetVehicles));
+   	else
+   		print("[LS2008MP] data/menu/reset_vehicles_button".. g_languageSuffix .. ".png is missing but nevermind, i'll not add the button to server menu")
+   	end
+    
     instance.selectedPositionBase = 2*instance.buttonHeight+instance.backPlayButtonSpacing+instance.upDownButtonSpacing+0.5*instance.imageSpacing;
 
     table.insert(instance.overlays, Overlay:new("background_overlay", "data/menu/missionmenu_background.png", instance.spacingLeft, instance.selectedPositionBase, 1-instance.spacingLeft*2, 4*(instance.imageSpacing+instance.imageSize)));
@@ -157,10 +164,20 @@ function serverMenu:render()
         local overlay = self.avatars[i];
         overlay:setPosition(self.spacingLeft + 0.015, 1 - (self.spacingTop+(self.imageSize+self.imageSpacing)*(i-self.startIndex) + self.imageSize));
         overlay:render();
-
-
-        local savegameName = g_i18n:getText("Savegame") .. " " .. i;
-
+        
+		local savegameName = ""
+		
+		if g_i18n ~= nil then --addon version of game that has i18n support
+        	savegameName = g_i18n:getText("Savegame") .. " " .. i;
+		else --fallback to original game
+			savegameName = "Unknown Language";
+        	if g_language == LANGUANGE_DE then
+        	    savegameName = "Spielstand " .. i;
+        	elseif g_language == LANGUANGE_EN then
+        	    savegameName = "Savegame " .. i;
+        	end;
+        end
+        
         setTextColor(1.0, 1.0, 1.0, 1.0);
         setTextBold(true);
         renderText(self.spacingLeft+self.spacingLeftInner, 1-(self.spacingTop+(self.imageSize+self.imageSpacing)*(i-self.startIndex) + self.textSizeTitle)+0.005, self.textSizeTitle, savegameName);
@@ -175,14 +192,22 @@ function serverMenu:render()
             local playTimeHoursF = savegame.stats.playTime/60+0.0001;
             local playTimeHours = math.floor(playTimeHoursF);
             local playTimeMinutes = math.floor((playTimeHoursF-playTimeHours)*60);
-            desc1 = g_i18n:getText("Money") .. ":\n" .. g_i18n:getText("Corn_storage") .. ":\n" .. g_i18n:getText("In_game_time") .. ":\n" .. g_i18n:getText("Duration") .. ":\n"  .. g_i18n:getText("Save_date") .. ":";
+            if g_i18n ~= nil then --addon version of the game
+            	desc1 = g_i18n:getText("Money") .. ":\n" .. g_i18n:getText("Corn_storage") .. ":\n" .. g_i18n:getText("In_game_time") .. ":\n" .. g_i18n:getText("Duration") .. ":\n"  .. g_i18n:getText("Save_date") .. ":";
+            else --original old version of the game
+            	desc1 = "Geld:\n" .. "Kornlager:\n" .. "Uhrzeit im Spiel:\n" .. "Spieldauer:\n"  .. "Speicherdatum:";
+            end
             desc2 = string.format("%d", savegame.stats.money) .. " €\n" ..
                     string.format("%d", savegame.stats.farmSiloWheatAmount) .. " liter\n" ..
                    string.format("%02d:%02d", timeHours, timeMinutes) .. " h\n" ..
                    string.format("%02d:%02d", playTimeHours, playTimeMinutes) .. " hh:mm\n" ..
                    savegame.stats.saveDate;
         else
-            desc1 = g_i18n:getText("This_savegame_is_currently_unused");
+        	if g_i18n ~= nil then
+            	desc1 = g_i18n:getText("This_savegame_is_currently_unused");
+            else
+            	desc1 = "Dieser Spielstand ist zur Zeit unbenutzt";
+            end
             desc2 = "";
         end;
         renderText(self.spacingLeft+self.spacingLeftInner, 1-(self.spacingTop+(self.imageSize+self.imageSpacing)*(i-self.startIndex) + self.textSizeTitle + self.textTitleSpacing + self.textSizeDesc)+0.01, self.textSizeDesc, desc1);
@@ -211,10 +236,6 @@ end;
 function serverMenu:startSelectedGame()
     local savegame = self.savegames[self.selectedIndex];
 
-    if g_isDemo then
-        return;
-    end;
-
     local dir = self:getSavegameDirectory(self.selectedIndex);
 
     createFolder(dir);
@@ -224,14 +245,19 @@ function serverMenu:startSelectedGame()
     copyFile(careerVehiclesPath, savegame.vehiclesXML, overwrite);
 
 
-    if savegame.valid and savegame.densityMapRevision == serverMenu.densityMapRevision then
+    if savegame.valid then
         setTerrainLoadDirectory(dir);
     else
         setTerrainLoadDirectory("");
     end;
 
     g_missionLoaderDesc = {};
-    g_missionLoaderDesc.scriptFilename = "data/missions/mission00.lua";
+    if g_i18n ~= nil then
+    	g_missionLoaderDesc.scriptFilename = "data/missions/mission00.lua";
+    else
+    	g_missionLoaderDesc.scriptFilename = "data/scripts/multiplayer/originalMission00.lua";
+    	print("[LS2008MP] loading newer mission00 for vehicle.xml support")
+    end
     g_missionLoaderDesc.scriptClass = "Mission00";
     g_missionLoaderDesc.id = 0;
     g_missionLoaderDesc.bronze = 0;
@@ -243,7 +269,18 @@ function serverMenu:startSelectedGame()
     g_missionLoaderDesc.stats = savegame.stats;
     g_missionLoaderDesc.vehiclesXML = savegame.vehiclesXML;
 
-    serverLoadingScreenMode();
+    stopSample(g_menuMusic);
+
+    gameMenuSystem.loadScreen = serverLoading:new(OnLoadingScreen);
+    gameMenuSystem.loadScreen:setScriptInfo(g_missionLoaderDesc.scriptFilename, g_missionLoaderDesc.scriptClass);
+    gameMenuSystem.loadScreen:setMissionInfo(g_missionLoaderDesc.id, g_missionLoaderDesc.bronze, g_missionLoaderDesc.silver, g_missionLoaderDesc.gold);
+    --gameMenuSystem.loadScreen:addItem(g_missionLoaderDesc.backgroundOverlay);
+    gameMenuSystem.loadScreen:addItem(g_missionLoaderDesc.overlayBriefing);
+    gameMenuSystem.inGameMenu:setMissionId(g_missionLoaderDesc.id);
+
+    gameMenuSystem.currentMenu = gameMenuSystem.loadScreen;
+    
+    
 	MPinitSrvCli = false
 	MPenabled = not MPenabled
 	setCaption("LS2008MP v" .. MPversion .. " | Server | ".. MPplayerName)
@@ -274,26 +311,28 @@ end;
 function serverMenu:saveSavegameToXML(savegame, id)
     local baseString = "savegames.quickPlay.savegame"..id;
     setXMLBool(g_savegameXML, baseString.."#valid", savegame.valid);
-    setXMLInt(g_savegameXML, baseString.."#densityMapRevision", savegame.densityMapRevision);
-
+    
+    if g_i18n ~= nil then
+    	setXMLInt(g_savegameXML, baseString.."#densityMapRevision", savegame.densityMapRevision);
+	end
+	
     self:saveStatsToXML(baseString, savegame);
 
     -- save vehicle positions
     local vehiclesFile = io.open (savegame.vehiclesXML, "w");
     if vehiclesFile ~= nil then
-        vehiclesFile:write('<?xml version="1.0" encoding="iso-8859-1" standalone="no" ?>\n<careerVehicles>\n');
+    	vehiclesFile:write('<?xml version="1.0" encoding="iso-8859-1" standalone="no" ?>\n<careerVehicles>\n');
+     	if g_currentMission ~= nil then
+  	    	self:writeVehicleListToFile(vehiclesFile, g_currentMission.attachables);
+   	       	self:writeVehicleListToFile(vehiclesFile, g_currentMission.vehicles);
+   	        self:writeVehicleListToFile(vehiclesFile, g_currentMission.trailers);
+   	        self:writeVehicleListToFile(vehiclesFile, g_currentMission.cutters);
+     	end;
 
-        if g_currentMission ~= nil then
-            self:writeVehicleListToFile(vehiclesFile, g_currentMission.attachables);
-            self:writeVehicleListToFile(vehiclesFile, g_currentMission.vehicles);
-            self:writeVehicleListToFile(vehiclesFile, g_currentMission.trailers);
-            self:writeVehicleListToFile(vehiclesFile, g_currentMission.cutters);
-        end;
-
-        vehiclesFile:write("</careerVehicles>");
-
-        vehiclesFile:close();
-    end;
+    	vehiclesFile:write("</careerVehicles>");
+    	vehiclesFile:close();
+   	end;
+   	
 end;
 
 function serverMenu:writeVehicleListToFile(file, list)
@@ -301,10 +340,17 @@ function serverMenu:writeVehicleListToFile(file, list)
         local vehicle = list[i];
         local x,y,z = getTranslation(vehicle.rootNode);
         local xRot,yRot,zRot = getRotation(vehicle.rootNode);
-        file:write('    <vehicle filename="'.. vehicle.configFileName ..'" xPosition="'..x..'" yPosition="'..y..'" zPosition="'..z..'" xRotation="'..xRot..'" yRotation="'..yRot..'" zRotation="'..zRot..'" absolute="true"');
-        if vehicle.fillLevel ~= nil and vehicle.setFillLevel and vehicle.currentFillType ~= nil then
-            file:write(' fillLevel="'..vehicle.fillLevel..'" fillType="'..vehicle.currentFillType..'"');
-        end;
+        if g_i18n ~= nil then
+        	file:write('    <vehicle filename="'.. vehicle.configFileName ..'" xPosition="'..x..'" yPosition="'..y..'" zPosition="'..z..'" xRotation="'..xRot..'" yRotation="'..yRot..'" zRotation="'..zRot..'" absolute="true"');
+        	if vehicle.fillLevel ~= nil and vehicle.setFillLevel and vehicle.currentFillType ~= nil then
+        	    file:write(' fillLevel="'..vehicle.fillLevel..'" fillType="'..vehicle.currentFillType..'"');
+        	end;
+        else --smaller vehicle save thing for original game
+        	file:write('    <vehicle filename="'.. vehicle.configFileName ..'" xPosition="'..x..'" yPosition="'..y..'" zPosition="'..z..'" xRotation="'..xRot..'" yRotation="'..yRot..'" zRotation="'..zRot..'" absolute="true"');
+        	if vehicle.fillLevel ~= nil and vehicle.setFillLevel and vehicle.currentFillType ~= nil then
+        	    file:write(' fillLevel="'..vehicle.fillLevel..'" fillType="'..vehicle.currentFillType..'"');
+        	end;
+        end
         file:write('/>\n');
     end;
 end;
@@ -318,7 +364,9 @@ end;
 function serverMenu:saveSelectedGame()
     local savegame = self.savegames[self.selectedIndex];
     savegame.valid = true;
-    savegame.densityMapRevision = serverMenu.densityMapRevision;
+    if g_i18n ~= nil then
+    	savegame.densityMapRevision = serverMenu.densityMapRevision;
+    end
     self:getStatsFromMission(savegame);
     self:saveSavegameToXML(savegame, self.selectedIndex);
 
@@ -339,11 +387,13 @@ function serverMenu:saveSelectedGame()
     local cuttedWheatFilename = getDensityMapFileName(g_currentMission.cuttedWheatId);
     saveDensityMapToFile(g_currentMission.cuttedWheatId, dir .."/"..cuttedWheatFilename);
 
-    local meadowFilename = getDensityMapFileName(g_currentMission.meadowId);
-    saveDensityMapToFile(g_currentMission.meadowId, dir .."/"..meadowFilename);
+    if g_i18n ~= nil then --simple original game check based on i18n
+    	local meadowFilename = getDensityMapFileName(g_currentMission.meadowId);
+    	saveDensityMapToFile(g_currentMission.meadowId, dir .."/"..meadowFilename);
 
-    local cuttedMeadowFilename = getDensityMapFileName(g_currentMission.cuttedMeadowId);
-    saveDensityMapToFile(g_currentMission.cuttedMeadowId, dir .."/"..cuttedMeadowFilename);
+    	local cuttedMeadowFilename = getDensityMapFileName(g_currentMission.cuttedMeadowId);
+    	saveDensityMapToFile(g_currentMission.cuttedMeadowId, dir .."/"..cuttedMeadowFilename);
+    end
 end;
 
 function serverMenu:loadSavegameFromXML(index)
@@ -358,7 +408,9 @@ function serverMenu:loadSavegameFromXML(index)
             self:loadStatsDefaults(savegame);
         end;
 
-        savegame.densityMapRevision = Utils.getNoNil(getXMLInt(g_savegameXML, baseXMLName .. "#densityMapRevision"), 1);
+        if g_i18n ~= nil then
+       		savegame.densityMapRevision = Utils.getNoNil(getXMLInt(g_savegameXML, baseXMLName .. "#densityMapRevision"), 1);
+		end
 
         local dir = self:getSavegameDirectory(index);
         savegame.vehiclesXML = dir .. "/vehicles.xml";
@@ -505,22 +557,4 @@ end;
 
 function OnserverMenuScrollDown()
     gameMenuSystem.serverMenu:setSelectedIndex(gameMenuSystem.serverMenu.selectedIndex+1);
-end;
-
-function serverLoadingScreenMode()
-
-    stopSample(g_menuMusic);
-
-    gameMenuSystem.loadScreen = serverLoading:new(OnLoadingScreen);
-    gameMenuSystem.loadScreen:setScriptInfo(g_missionLoaderDesc.scriptFilename, g_missionLoaderDesc.scriptClass);
-    gameMenuSystem.loadScreen:setMissionInfo(g_missionLoaderDesc.id, g_missionLoaderDesc.bronze, g_missionLoaderDesc.silver, g_missionLoaderDesc.gold);
-    --gameMenuSystem.loadScreen:addItem(g_missionLoaderDesc.backgroundOverlay);
-    gameMenuSystem.loadScreen:addItem(g_missionLoaderDesc.overlayBriefing);
-    --self.loadScreen:addItem(g_missionLoaderDesc.overlayBriefingMedals);
-
-    --gameMenuSystem.inGameMenu:setExtraOverlays(g_missionLoaderDesc.overlayBriefing);
-    --self.inGameMenu.missionId=g_missionLoaderDesc.id;
-    gameMenuSystem.inGameMenu:setMissionId(g_missionLoaderDesc.id);
-
-    gameMenuSystem.currentMenu = gameMenuSystem.loadScreen;
 end;
