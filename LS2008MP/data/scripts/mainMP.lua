@@ -3,7 +3,7 @@
 -- beware!, this is an incredible spaghetti code and although it works somehow i just don't recommend even trying to touch it
 -- because it may break out of sudden and not a single person will ever fix it. 
 -- @author  Richard Gráčik (mailto:r.gracik@gmail.com)
--- @date  10.11.2020 - 7.12.2020
+-- @date  10.11.2020 - 9.12.2020
 
 MPloaded = false
 MPversion = "0.11 luasockets"
@@ -58,6 +58,10 @@ MPclientDir = ""
 MPshowNewPlayer = false
 MPnewPlayerName = ""
 
+--modpacks and other game versions
+isOriginalGame = false
+isModAgri = false
+
 --array with original functions from game
 original = {}
 
@@ -91,6 +95,25 @@ function init()
 	BaseMission.loadVehicle = MPloadVehicle
 		
 	print("[LS2008MP] main.lua injector - finished")
+		
+		
+	print("[LS2008MP] game/modpack detection")
+	if Barriere ~= nil  then
+		print("[LS2008MP] Barriere script from ModAgri exists so seems like we are on ModAgri v2")
+		isModAgri = true
+		MPtimescaleUpdate = MPtimescaleUpdateModAgri
+	elseif g_i18n ~= nil then
+		print("[LS2008MP] g_i18n exists, seems like we are on the newer addon version of the game")
+		MPtimescaleUpdate = MPtimescaleUpdateAddon
+	elseif g_i18n == nil then
+		print("[LS2008MP] g_i18n is missing, seems like we are on the original game")
+		isOriginalGame = true
+		MPtimescaleUpdate = MPtimescaleUpdateOriginal
+	else
+		print("[LS2008MP] unable to detect game or modpack, better report this to Morc")
+		MPtimescaleUpdate = MPtimescaleUpdateOriginal
+	end
+	
 	
 	print("[LS2008MP] loading multiplayer settings")
 	require("multiplayer") --load /multiplayer.lua settings file
@@ -906,16 +929,36 @@ end
 function MPfakeFunction()
 	return
 end
-function MPmission00Update(self, dt)
-	Mission00:superClass().update(self, dt);
 
-    --[[if self.environment.dayTime > 20*60*60*1000 or self.environment.dayTime < 6*60*60*1000 then
+function MPtimescaleUpdateAddon(self)
+	if self.environment.dayTime > 20*60*60*1000 or self.environment.dayTime < 6*60*60*1000 then
         -- timescale night
         self.environment.timeScale = g_settingsTimeScale;
+   	else
+   	    -- timescale day
+   	    self.environment.timeScale = g_settingsTimeScale/4;
+   	end
+end
+
+function MPtimescaleUpdateOriginal(self)
+end
+
+function MPtimescaleUpdateModAgri(self)
+	if self.environment.dayTime > 20*60*60*1000 or self.environment.dayTime < 6*60*60*1000 then
+       -- timescale night
+        self.environment.timeScale = g_settingsTimeScale;
+        self.missionStats.farmSiloCurageAmount = self.missionStats.farmSiloCurageAmount + 0.05;
     else
         -- timescale day
         self.environment.timeScale = g_settingsTimeScale/4;
-    end;]]
+        self.missionStats.farmSiloCurageAmount = self.missionStats.farmSiloCurageAmount + 0.05;
+    end;
+end
+
+function MPmission00Update(self, dt)
+	Mission00:superClass().update(self, dt);
+	
+    MPtimescaleUpdate(self)
     
     
     --the only part of the code that needed to be modified (but i'm still not sure if it won't break with ModAgri)

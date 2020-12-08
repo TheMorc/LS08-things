@@ -167,15 +167,15 @@ function serverMenu:render()
         
 		local savegameName = ""
 		
-		if g_i18n ~= nil then --addon version of game that has i18n support
-        	savegameName = g_i18n:getText("Savegame") .. " " .. i;
-		else --fallback to original game
-			savegameName = "Unknown Language";
+		if isOriginalGame then --fallback to original game
+        	savegameName = "Unknown Language";
         	if g_language == LANGUANGE_DE then
         	    savegameName = "Spielstand " .. i;
         	elseif g_language == LANGUANGE_EN then
         	    savegameName = "Savegame " .. i;
         	end;
+		else --addon version of game that has i18n support
+			savegameName = g_i18n:getText("Savegame") .. " " .. i;
         end
         
         setTextColor(1.0, 1.0, 1.0, 1.0);
@@ -192,10 +192,10 @@ function serverMenu:render()
             local playTimeHoursF = savegame.stats.playTime/60+0.0001;
             local playTimeHours = math.floor(playTimeHoursF);
             local playTimeMinutes = math.floor((playTimeHoursF-playTimeHours)*60);
-            if g_i18n ~= nil then --addon version of the game
-            	desc1 = g_i18n:getText("Money") .. ":\n" .. g_i18n:getText("Corn_storage") .. ":\n" .. g_i18n:getText("In_game_time") .. ":\n" .. g_i18n:getText("Duration") .. ":\n"  .. g_i18n:getText("Save_date") .. ":";
-            else --original old version of the game
+            if isOriginalGame then --addon version of the game
             	desc1 = "Geld:\n" .. "Kornlager:\n" .. "Uhrzeit im Spiel:\n" .. "Spieldauer:\n"  .. "Speicherdatum:";
+            else --original old version of the game
+            	desc1 = g_i18n:getText("Money") .. ":\n" .. g_i18n:getText("Corn_storage") .. ":\n" .. g_i18n:getText("In_game_time") .. ":\n" .. g_i18n:getText("Duration") .. ":\n"  .. g_i18n:getText("Save_date") .. ":";
             end
             desc2 = string.format("%d", savegame.stats.money) .. " €\n" ..
                     string.format("%d", savegame.stats.farmSiloWheatAmount) .. " liter\n" ..
@@ -203,10 +203,10 @@ function serverMenu:render()
                    string.format("%02d:%02d", playTimeHours, playTimeMinutes) .. " hh:mm\n" ..
                    savegame.stats.saveDate;
         else
-        	if g_i18n ~= nil then
-            	desc1 = g_i18n:getText("This_savegame_is_currently_unused");
-            else
+        	if isOriginalGame then
             	desc1 = "Dieser Spielstand ist zur Zeit unbenutzt";
+            else
+            	desc1 = g_i18n:getText("This_savegame_is_currently_unused");
             end
             desc2 = "";
         end;
@@ -252,11 +252,11 @@ function serverMenu:startSelectedGame()
     end;
 
     g_missionLoaderDesc = {};
-    if g_i18n ~= nil then
-    	g_missionLoaderDesc.scriptFilename = "data/missions/mission00.lua";
-    else
+    if isOriginalGame then
     	g_missionLoaderDesc.scriptFilename = "data/scripts/multiplayer/originalMission00.lua";
     	print("[LS2008MP] loading newer mission00 for vehicle.xml support")
+    else
+    	g_missionLoaderDesc.scriptFilename = "data/missions/mission00.lua";
     end
     g_missionLoaderDesc.scriptClass = "Mission00";
     g_missionLoaderDesc.id = 0;
@@ -312,7 +312,7 @@ function serverMenu:saveSavegameToXML(savegame, id)
     local baseString = "savegames.quickPlay.savegame"..id;
     setXMLBool(g_savegameXML, baseString.."#valid", savegame.valid);
     
-    if g_i18n ~= nil then
+    if not isOriginalGame then
     	setXMLInt(g_savegameXML, baseString.."#densityMapRevision", savegame.densityMapRevision);
 	end
 	
@@ -340,12 +340,12 @@ function serverMenu:writeVehicleListToFile(file, list)
         local vehicle = list[i];
         local x,y,z = getTranslation(vehicle.rootNode);
         local xRot,yRot,zRot = getRotation(vehicle.rootNode);
-        if g_i18n ~= nil then
+        if isOriginalGame then
         	file:write('    <vehicle filename="'.. vehicle.configFileName ..'" xPosition="'..x..'" yPosition="'..y..'" zPosition="'..z..'" xRotation="'..xRot..'" yRotation="'..yRot..'" zRotation="'..zRot..'" absolute="true"');
         	if vehicle.fillLevel ~= nil and vehicle.setFillLevel and vehicle.currentFillType ~= nil then
         	    file:write(' fillLevel="'..vehicle.fillLevel..'" fillType="'..vehicle.currentFillType..'"');
         	end;
-        else --smaller vehicle save thing for original game
+        else       	
         	file:write('    <vehicle filename="'.. vehicle.configFileName ..'" xPosition="'..x..'" yPosition="'..y..'" zPosition="'..z..'" xRotation="'..xRot..'" yRotation="'..yRot..'" zRotation="'..zRot..'" absolute="true"');
         	if vehicle.fillLevel ~= nil and vehicle.setFillLevel and vehicle.currentFillType ~= nil then
         	    file:write(' fillLevel="'..vehicle.fillLevel..'" fillType="'..vehicle.currentFillType..'"');
@@ -358,13 +358,13 @@ end;
 function serverMenu:reset()
     for i=1, table.getn(self.overlayButtons) do
         self.overlayButtons[i]:reset();
-    end;
+    end
 end;
 
 function serverMenu:saveSelectedGame()
     local savegame = self.savegames[self.selectedIndex];
     savegame.valid = true;
-    if g_i18n ~= nil then
+    if not isOriginalGame then
     	savegame.densityMapRevision = serverMenu.densityMapRevision;
     end
     self:getStatsFromMission(savegame);
@@ -387,12 +387,29 @@ function serverMenu:saveSelectedGame()
     local cuttedWheatFilename = getDensityMapFileName(g_currentMission.cuttedWheatId);
     saveDensityMapToFile(g_currentMission.cuttedWheatId, dir .."/"..cuttedWheatFilename);
 
-    if g_i18n ~= nil then --simple original game check based on i18n
+    if g_currentMission.meadowId ~= nil then
     	local meadowFilename = getDensityMapFileName(g_currentMission.meadowId);
     	saveDensityMapToFile(g_currentMission.meadowId, dir .."/"..meadowFilename);
-
+	end
+	
+	if g_currentMission.cuttedMeadowId ~= nil then
     	local cuttedMeadowFilename = getDensityMapFileName(g_currentMission.cuttedMeadowId);
     	saveDensityMapToFile(g_currentMission.cuttedMeadowId, dir .."/"..cuttedMeadowFilename);
+    end
+    
+    if g_currentMission.strawId ~= nil then
+    	local strawFilename = getDensityMapFileName(g_currentMission.strawId);
+    	saveDensityMapToFile(g_currentMission.strawId, dir .."/"..strawFilename);
+	end
+	
+	if g_currentMission.swathId ~= nil then
+		local swathFilename = getDensityMapFileName(g_currentMission.swathId);
+    	saveDensityMapToFile(g_currentMission.swathId, dir .."/"..swathFilename);
+	end
+	
+	if g_currentMission.hayShiftingId ~= nil then
+		local hayShiftingFilename = getDensityMapFileName(g_currentMission.hayShiftingId);
+    	saveDensityMapToFile(g_currentMission.hayShiftingId, dir .."/"..hayShiftingFilename);
     end
 end;
 
@@ -408,7 +425,7 @@ function serverMenu:loadSavegameFromXML(index)
             self:loadStatsDefaults(savegame);
         end;
 
-        if g_i18n ~= nil then
+        if not isOriginalGame then
        		savegame.densityMapRevision = Utils.getNoNil(getXMLInt(g_savegameXML, baseXMLName .. "#densityMapRevision"), 1);
 		end
 
@@ -434,6 +451,12 @@ function serverMenu:loadStatsDefaults(savegame)
     savegame.stats.hectaresThreshed = 0;
     savegame.stats.threshingDuration = 0;
     savegame.stats.farmSiloWheatAmount = 0;
+    if isModAgri then
+    	savegame.stats.farmSiloEnsilageAmount = 0;
+    	savegame.stats.farmSiloEngraisAmount = 1000000000000000;
+    	savegame.stats.farmSiloCurageAmount = 0;
+    	savegame.stats.farmSiloFumierAmount = 0;   
+    end
     savegame.stats.storedWheatFarmSilo = 0;
     savegame.stats.soldWheatPortSilo = 0;
     savegame.stats.revenue = 0;
@@ -448,6 +471,7 @@ function serverMenu:loadStatsDefaults(savegame)
     savegame.stats.nextRainType = 0;
     savegame.stats.nextRainValid = false;
     savegame.stats.saveDate = "--.--.--";
+
 end;
 
 function serverMenu:loadStatsFromXML(baseXMLName, savegame)
@@ -460,6 +484,12 @@ function serverMenu:loadStatsFromXML(baseXMLName, savegame)
     savegame.stats.hectaresThreshed = Utils.getNoNil(getXMLFloat(g_savegameXML, baseXMLName .. "#hectaresThreshed"), 0);
     savegame.stats.threshingDuration = Utils.getNoNil(getXMLFloat(g_savegameXML, baseXMLName .. "#threshingDuration"), 0);
     savegame.stats.farmSiloWheatAmount = Utils.getNoNil(getXMLFloat(g_savegameXML, baseXMLName .. "#farmSiloWheatAmount"), 0);
+    if isModAgri then
+    	savegame.stats.farmSiloFumierAmount = Utils.getNoNil(getXMLFloat(g_savegameXML, baseXMLName .. "#farmSiloFumierAmount"), 0);  
+    	savegame.stats.farmSiloEnsilageAmount = Utils.getNoNil(getXMLFloat(g_savegameXML, baseXMLName .. "#farmSiloEnsilageAmount"), 0);
+    	savegame.stats.farmSiloEngraisAmount = Utils.getNoNil(getXMLFloat(g_savegameXML, baseXMLName .. "#farmSiloEngraisAmount"), 0);
+    	savegame.stats.farmSiloCurageAmount = Utils.getNoNil(getXMLFloat(g_savegameXML, baseXMLName .. "#farmSiloCurageAmount"), 0);
+    end
     savegame.stats.storedWheatFarmSilo = Utils.getNoNil(getXMLFloat(g_savegameXML, baseXMLName .. "#storedWheatFarmSilo"), 0);
     savegame.stats.soldWheatPortSilo = Utils.getNoNil(getXMLFloat(g_savegameXML, baseXMLName .. "#soldWheatPortSilo"), 0);
     savegame.stats.revenue = Utils.getNoNil(getXMLFloat(g_savegameXML, baseXMLName .. "#revenue"), 0);
@@ -487,6 +517,12 @@ function serverMenu:saveStatsToXML(baseXMLName, savegame)
     setXMLFloat(g_savegameXML, baseXMLName .. "#hectaresThreshed", savegame.stats.hectaresThreshed);
     setXMLFloat(g_savegameXML, baseXMLName .. "#threshingDuration", savegame.stats.threshingDuration);
     setXMLFloat(g_savegameXML, baseXMLName .. "#farmSiloWheatAmount", savegame.stats.farmSiloWheatAmount);
+    if isModAgri then
+    	setXMLFloat(g_savegameXML, baseXMLName .. "#farmSiloEnsilageAmount", savegame.stats.farmSiloEnsilageAmount);
+    	setXMLFloat(g_savegameXML, baseXMLName .. "#farmSiloEngraisAmount", savegame.stats.farmSiloEngraisAmount);
+    	setXMLFloat(g_savegameXML, baseXMLName .. "#farmSiloCurageAmount", savegame.stats.farmSiloCurageAmount);
+    	setXMLFloat(g_savegameXML, baseXMLName .. "#farmSiloFumierAmount", savegame.stats.farmSiloFumierAmount);  
+    end
     setXMLFloat(g_savegameXML, baseXMLName .. "#storedWheatFarmSilo", savegame.stats.storedWheatFarmSilo);
     setXMLFloat(g_savegameXML, baseXMLName .. "#soldWheatPortSilo", savegame.stats.soldWheatPortSilo);
     setXMLFloat(g_savegameXML, baseXMLName .. "#revenue", savegame.stats.revenue);
@@ -501,6 +537,7 @@ function serverMenu:saveStatsToXML(baseXMLName, savegame)
     setXMLInt(g_savegameXML, baseXMLName .. "#nextRainType", savegame.stats.nextRainType);
     setXMLBool(g_savegameXML, baseXMLName .. "#nextRainValid", savegame.stats.nextRainValid);
     setXMLString(g_savegameXML, baseXMLName .. "#saveDate", savegame.stats.saveDate);
+
 end;
 
 function serverMenu:getStatsFromMission(savegame)
@@ -518,6 +555,12 @@ function serverMenu:getStatsFromMission(savegame)
     savegame.stats.hectaresThreshed = g_currentMission.missionStats.hectaresThreshedTotal;
     savegame.stats.threshingDuration = g_currentMission.missionStats.threshingDurationTotal;
     savegame.stats.farmSiloWheatAmount = g_currentMission.missionStats.farmSiloWheatAmount;
+    if isModAgri then
+    	savegame.stats.farmSiloEnsilageAmount = g_currentMission.missionStats.farmSiloEnsilageAmount;
+    	savegame.stats.farmSiloEngraisAmount = g_currentMission.missionStats.farmSiloEngraisAmount;
+    	savegame.stats.farmSiloCurageAmount = g_currentMission.missionStats.farmSiloCurageAmount;
+    	savegame.stats.farmSiloFumierAmount = g_currentMission.missionStats.farmSiloFumierAmount;     
+    end
     savegame.stats.storedWheatFarmSilo = g_currentMission.missionStats.storedWheatFarmSiloTotal;
     savegame.stats.soldWheatPortSilo = g_currentMission.missionStats.soldWheatPortSiloTotal;
     savegame.stats.revenue = g_currentMission.missionStats.revenueTotal;
