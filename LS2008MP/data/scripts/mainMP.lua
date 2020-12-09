@@ -525,14 +525,15 @@ function MPvehicleUpdate(self, dt, isActive)
 		elseif self.MPinputEvent == "lights" then
 			self.MPinputEvent = ""
 			if self.MPeventState == "true" then
-				self.lightsActive = true
+				--self.lightsActive = true
 			else
-				self.lightsActive = false
+				--self.lightsActive = false
 			end
             for i=1, self.numLights do
-                local light = self.lights[i];
-                setVisibility(light, self.lightsActive);
+                --local light = self.lights[i];
+                --setVisibility(light, self.lightsActive);
             end;
+            --disabling lights sync because it can also crash the game, thanks GIANTS Software
         elseif self.MPinputEvent == "switchImplement" then
         	self.MPinputEvent = ""
             self:setSelectedImplement(tonumber(self.MPeventState));
@@ -923,6 +924,523 @@ function MPtrailerhandleDetachTrailerEvent(self)
 	return original.trailerhandleDetachTrailerEvent(self)
 end
 
+--i'm doing it separately for now even though it all does the same thing
+function MPLexion400APkeyEvent(self, unicode, sym, modifier, isDown)
+	original.Lexion400APkeyEvent(self, unicode, sym, modifier, isDown)
+	if self.attachedCutter ~= nil then
+    	if self.attachedCutter.autoPilotPresent and sym == Input.KEY_p and isDown then
+        	self.autoPilotEnabled = false; --LS2008MP doesn't support autopilot yet so i'm disabling it after pressing P on keyboard
+            if self.attachedCutter.autoPilotAreaLeft.available then
+            	self.attachedCutter.autoPilotAreaLeft.active = false;
+    		end
+    		if self.attachedCutter.autoPilotAreaRight.available then
+           		self.attachedCutter.autoPilotAreaRight.active = false;
+        	end;
+			self.autoRotateBackSpeed = self.autoRotateBackSpeedBackup;
+        	printChat("Autopilot is not currently supported")
+        end
+    end         
+end
+function MPCombineAP2keyEvent(self, unicode, sym, modifier, isDown)
+	original.CombineAP2keyEvent(self, unicode, sym, modifier, isDown)
+	if self.attachedCutter ~= nil then
+    	if self.attachedCutter.autoPilotPresent and sym == Input.KEY_p and isDown then
+        	self.autoPilotEnabled = false; --LS2008MP doesn't support autopilot yet so i'm disabling it after pressing P on keyboard
+            if self.attachedCutter.autoPilotAreaLeft.available then
+            	self.attachedCutter.autoPilotAreaLeft.active = false;
+    		end
+    		if self.attachedCutter.autoPilotAreaRight.available then
+           		self.attachedCutter.autoPilotAreaRight.active = false;
+        	end;
+			self.autoRotateBackSpeed = self.autoRotateBackSpeedBackup;
+        	printChat("Autopilot is not currently supported")
+        end
+    end          
+end
+function MPClaasJaguarAPkeyEvent(self, unicode, sym, modifier, isDown)
+	original.ClaasJaguarAPkeyEvent(self, unicode, sym, modifier, isDown)
+	if self.attachedCutter ~= nil then
+    	if self.attachedCutter.autoPilotPresent and sym == Input.KEY_p and isDown then
+        	self.autoPilotEnabled = false; --LS2008MP doesn't support autopilot yet so i'm disabling it after pressing P on keyboard
+            if self.attachedCutter.autoPilotAreaLeft.available then
+            	self.attachedCutter.autoPilotAreaLeft.active = false;
+    		end
+    		if self.attachedCutter.autoPilotAreaRight.available then
+           		self.attachedCutter.autoPilotAreaRight.active = false;
+        	end;
+			self.autoRotateBackSpeed = self.autoRotateBackSpeedBackup;
+        	printChat("Autopilot is not currently supported")
+        end
+    end         
+end
+
+function MPPloughWithDrumUpdate(self, dt)
+	original.PloughWithDrumUpdate(self, dt)
+	
+	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
+    	for i=1, #g_currentMission.attachables do
+      		if g_currentMission.attachables[i] == self then
+    			if MPstate == "Client" then
+					MPudp:send("bc1;ploughRot;"..MPplayerName..";"..i..";"..tostring(self.rotationMax))
+				else
+					handleUDPmessage("bc1;ploughRot;"..MPplayerName..";"..i..";"..tostring(self.rotationMax), MPip, MPport)
+				end
+			end
+		end
+    end
+end
+
+function MParesUpdate(self, dt)
+	original.aresUpdate(self, dt)
+	
+	if self.MPsitting then
+		if self.MPinputEvent == "backwindow" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.rotationMaxbackwindow = true;
+            else
+            	self.rotationMaxbackwindow = false
+            end
+        elseif self.MPinputEvent == "porte" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.rotationMaxporte = true;
+            else
+            	self.rotationMaxporte = false
+            end
+		elseif self.MPinputEvent == "bigWheels" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.bigWheelsActive = true;
+				self.twinWheelsActive = false;
+    	    	self.jumWheelsActive = false;
+    	    	self.smallWheelsActive = false;
+            else
+            	self.bigWheelsActive = false;
+				self.twinWheelsActive = false;
+    	    	self.jumWheelsActive = false;
+    	    	self.smallWheelsActive = true;
+            end
+		elseif self.MPinputEvent == "jumWheels" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.jumWheelsActive = true;
+				self.twinWheelsActive = false;
+   		    	self.bigWheelsActive = false;
+    	    	self.smallWheelsActive = true;
+            else
+            	self.jumWheelsActive = false;
+				self.twinWheelsActive = false;
+   		    	self.bigWheelsActive = false;
+    	    	self.smallWheelsActive = true;
+            end
+		elseif self.MPinputEvent == "twinWheels" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+        		self.twinWheelsActive = true;
+				self.bigWheelsActive = false;
+        		self.jumWheelsActive = false;
+        		self.smallWheelsActive = false;
+            else
+        		self.twinWheelsActive = false;
+				self.bigWheelsActive = false;
+        		self.jumWheelsActive = false;
+        		self.smallWheelsActive = true;
+            end
+		end	
+				
+		if self.twinWheelsActive then
+			for i=1, self.numTwinWheels do
+				local twinWheel = self.twinWheels[i];
+				setVisibility(twinWheel, self.twinWheelsActive);
+			end;
+		else
+			for i=1, self.numTwinWheels do
+				local twinWheel = self.twinWheels[i];
+				setVisibility(twinWheel, self.twinWheelsActive, false);
+			end;
+		end;
+		
+		if self.smallWheelsActive then
+			for i=1, self.numSmallWheels do
+				local smallWheel = self.smallWheels[i];
+				setVisibility(smallWheel, self.smallWheelsActive);
+			end;
+		else
+			for i=1, self.numSmallWheels do
+				local smallWheel = self.smallWheels[i];
+				setVisibility(smallWheel, self.smallWheelsActive, false);
+			end;
+		end;
+       if not self.bigWheelsActive then
+			for i=1, self.numBigWheels do
+				local bigWheel = self.bigWheels[i];
+				setVisibility(bigWheel, self.bigWheelsActive, false);
+			end;
+		else
+			for i=1, self.numBigWheels do
+				local bigWheel = self.bigWheels[i];
+				setVisibility(bigWheel, self.bigWheelsActive);
+			end;
+		end;
+        if not self.jumWheelsActive then
+			for i=1, self.numjumWheels do
+				local jumWheel = self.jumWheels[i];
+				setVisibility(jumWheel, self.jumWheelsActive, false);
+			end;
+		else
+			for i=1, self.numjumWheels do
+				local jumWheel = self.jumWheels[i];
+				setVisibility(jumWheel, self.jumWheelsActive);
+			end;
+		end;
+	end
+end
+function MPareskeyEvent(self, unicode, sym, modifier, isDown)
+	original.areskeyEvent(self, unicode, sym, modifier, isDown)
+	
+	if self.isEntered then
+    	if isDown and sym == Input.KEY_9 then
+			for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
+					else
+						handleUDPmessage("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow), MPip, MPport)
+					end
+				end
+			end
+		end; 
+
+     	if isDown and sym == Input.KEY_p then 
+			for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
+					else
+						handleUDPmessage("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte), MPip, MPport)
+					end
+				end
+			end
+		end;
+          
+		if isDown and sym == Input.KEY_6 then
+    	    for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;twinWheels;"..MPplayerName..";"..i..";"..tostring(self.twinWheelsActive))
+					else
+						handleUDPmessage("bc1;vehEvent;twinWheels;"..MPplayerName..";"..i..";"..tostring(self.twinWheelsActive), MPip, MPport)
+					end
+				end
+			end
+		end;
+		
+		if isDown and sym == Input.KEY_7 then
+    	    for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;bigWheels;"..MPplayerName..";"..i..";"..tostring(self.bigWheelsActive))
+					else
+						handleUDPmessage("bc1;vehEvent;bigWheels;"..MPplayerName..";"..i..";"..tostring(self.bigWheelsActive), MPip, MPport)
+					end
+				end
+			end
+		end;
+
+   		 if isDown and sym == Input.KEY_8 then
+    	    for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
+					else
+						handleUDPmessage("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive), MPip, MPport)
+					end
+				end
+			end
+		end;
+	end
+end
+
+function MPrenaultUpdate(self, dt)
+	original.renaultUpdate(self,dt)
+	
+	if self.MPsitting then
+		if self.MPinputEvent == "backwindow" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.rotationMaxbackwindow = true;
+            else
+            	self.rotationMaxbackwindow = false
+            end
+        elseif self.MPinputEvent == "porte" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.rotationMaxporte = true;
+            else
+            	self.rotationMaxporte = false
+            end
+		elseif self.MPinputEvent == "porte1" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.rotationMaxporte1 = true;
+            else
+            	self.rotationMaxporte1 = false
+            end
+		elseif self.MPinputEvent == "jumWheels" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.jumWheelsActive = true;
+				self.twinWheelsActive = false;
+   		    	self.bigWheelsActive = false;
+    	    	self.smallWheelsActive = true;
+            else
+            	self.jumWheelsActive = false;
+				self.twinWheelsActive = false;
+   		    	self.bigWheelsActive = false;
+    	    	self.smallWheelsActive = true;
+            end
+		end	
+				
+		if not self.jumWheelsActive then
+			for i=1, self.numjumWheels do
+				local jumWheel = self.jumWheels[i];
+				setVisibility(jumWheel, self.jumWheelsActive);
+			end;
+		else
+			for i=1, self.numjumWheels do
+				local jumWheel = self.jumWheels[i];
+				setVisibility(jumWheel, self.jumWheelsActive, false);
+			end;
+		end;
+	end
+end
+function MPrenaultkeyEvent(self, unicode, sym, modifier, isDown)
+	original.renaultkeyEvent(self, unicode, sym, modifier, isDown)
+	
+	if self.isEntered then
+    	if isDown and sym == Input.KEY_7 then 
+			for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
+					else
+						handleUDPmessage("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow), MPip, MPport)
+					end
+				end
+			end
+		end; 
+
+     	if isDown and sym == Input.KEY_p then 
+			for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
+					else
+						handleUDPmessage("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte), MPip, MPport)
+					end
+				end
+			end
+		end;
+		
+		if isDown and sym == Input.KEY_o then 
+			for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;porte1;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte1))
+					else
+						handleUDPmessage("bc1;vehEvent;porte1;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte1), MPip, MPport)
+					end
+				end
+			end
+		end; 
+		
+   		if isDown and sym == Input.KEY_6 then
+    	    for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
+					else
+						handleUDPmessage("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive), MPip, MPport)
+					end
+				end
+			end
+		end;
+	end
+end
+
+function MPcaseUpdate(self, dt)
+	original.caseUpdate(self, dt)
+	
+	if self.MPsitting then
+		if self.MPinputEvent == "backwindow" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.rotationMaxbackwindow = true;
+            else
+            	self.rotationMaxbackwindow = false
+            end
+        elseif self.MPinputEvent == "porte" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.rotationMaxporte = true;
+            else
+            	self.rotationMaxporte = false
+            end
+		--[[elseif self.MPinputEvent == "travails" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.travailsActive = true;
+            else
+            	self.travailsActive = false
+            end]]
+		elseif self.MPinputEvent == "bigWheels" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.bigWheelsActive = true;
+				self.twinWheelsActive = false;
+    	    	self.jumWheelsActive = false;
+    	    	self.smallWheelsActive = false;
+            else
+            	self.bigWheelsActive = false;
+				self.twinWheelsActive = false;
+    	    	self.jumWheelsActive = false;
+    	    	self.smallWheelsActive = true;
+            end
+		elseif self.MPinputEvent == "jumWheels" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.jumWheelsActive = true;
+				self.twinWheelsActive = false;
+   		    	self.bigWheelsActive = false;
+    	    	self.smallWheelsActive = true;
+            else
+            	self.jumWheelsActive = false;
+				self.twinWheelsActive = false;
+   		    	self.bigWheelsActive = false;
+    	    	self.smallWheelsActive = true;
+            end
+		end	
+
+		--[[if self.travailsActive then
+		   for i=1, self.numtravails do
+			local travail = self.travails[i];
+			setVisibility(travail, self.travailsActive);
+		   end;
+	       else
+		   for i=1, self.numtravails do
+			local travail = self.travails[i];
+			setVisibility(travail, self.travailsActive, false);
+		end;
+	    end;]]
+		
+				
+		if self.smallWheelsActive then
+			for i=1, self.numSmallWheels do
+				local smallWheel = self.smallWheels[i];
+				setVisibility(smallWheel, self.smallWheelsActive);
+			end;
+		else
+			for i=1, self.numSmallWheels do
+				local smallWheel = self.smallWheels[i];
+				setVisibility(smallWheel, self.smallWheelsActive, false);
+			end;
+		end;
+       if not self.bigWheelsActive then
+			for i=1, self.numBigWheels do
+				local bigWheel = self.bigWheels[i];
+				setVisibility(bigWheel, self.bigWheelsActive, false);
+			end;
+		else
+			for i=1, self.numBigWheels do
+				local bigWheel = self.bigWheels[i];
+				setVisibility(bigWheel, self.bigWheelsActive);
+			end;
+		end;
+        if not self.jumWheelsActive then
+			for i=1, self.numjumWheels do
+				local jumWheel = self.jumWheels[i];
+				setVisibility(jumWheel, self.jumWheelsActive, false);
+			end;
+		else
+			for i=1, self.numjumWheels do
+				local jumWheel = self.jumWheels[i];
+				setVisibility(jumWheel, self.jumWheelsActive);
+			end;
+		end;
+	end
+end
+function MPcasekeyEvent(self, unicode, sym, modifier, isDown)
+	original.casekeyEvent(self, unicode, sym, modifier, isDown)
+	
+	if self.isEntered then
+    	if isDown and sym == Input.KEY_9 then
+			for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
+					else
+						handleUDPmessage("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow), MPip, MPport)
+					end
+				end
+			end
+		end; 
+
+     	if isDown and sym == Input.KEY_p then 
+			for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
+					else
+						handleUDPmessage("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte), MPip, MPport)
+					end
+				end
+			end
+		end; 
+
+   	 	--if isDown and sym == Input.KEY_5 then
+		--	self.worklightsActive = not self.worklightsActive; not for now because you know, it crashes the game 
+		--end;
+     
+    	--[[if isDown and sym == Input.KEY_4 then
+			for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;travails;"..MPplayerName..";"..i..";"..tostring(self.travailsActive))
+					else
+						handleUDPmessage("bc1;vehEvent;travails;"..MPplayerName..";"..i..";"..tostring(self.travailsActive), MPip, MPport)
+					end
+				end
+			end
+		end;]]--lights, disabled
+
+          
+		if isDown and sym == Input.KEY_7 then
+    	    for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;bigWheels;"..MPplayerName..";"..i..";"..tostring(self.bigWheelsActive))
+					else
+						handleUDPmessage("bc1;vehEvent;bigWheels;"..MPplayerName..";"..i..";"..tostring(self.bigWheelsActive), MPip, MPport)
+					end
+				end
+			end
+		end;
+
+   		 if isDown and sym == Input.KEY_8 then
+    	    for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
+					else
+						handleUDPmessage("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive), MPip, MPport)
+					end
+				end
+			end
+		end;
+	end
+end
+
 function MPfakeUpdate(dt)
 	return
 end
@@ -939,10 +1457,8 @@ function MPtimescaleUpdateAddon(self)
    	    self.environment.timeScale = g_settingsTimeScale/4;
    	end
 end
-
 function MPtimescaleUpdateOriginal(self)
 end
-
 function MPtimescaleUpdateModAgri(self)
 	if self.environment.dayTime > 20*60*60*1000 or self.environment.dayTime < 6*60*60*1000 then
        -- timescale night
@@ -989,6 +1505,37 @@ function MPmission00Update(self, dt)
                         self.missionStats.revenueTotal = self.missionStats.revenueTotal - money;
                         self.missionStats.revenueSession = self.missionStats.revenueSession - money;
                     end;
+                    if isModAgri then
+                    	if trailer.currentFillType == Trailer.FILLTYPE_EAU then
+                        	if self.currentTipTrigger.isFarmTrigger then
+                        	    self.missionStats.farmSiloEngraisAmount = self.missionStats.farmSiloEngraisAmount - trailer.lastFillDelta;                            
+                        	end;
+                    	elseif trailer.currentFillType == Trailer.FILLTYPE_ENGRAIS then                       
+                            local money = g_engraisPricePerLiter*trailer.lastFillDelta;
+                            self.missionStats.money = self.missionStats.money - money;
+
+                            self.missionStats.revenueTotal = self.missionStats.revenueTotal - money;
+                            self.missionStats.revenueSession = self.missionStats.revenueSession - money;
+
+                            self.missionStats.soldWheatPortSiloTotal = self.missionStats.soldWheatPortSiloTotal - trailer.lastFillDelta;
+                            self.missionStats.soldWheatPortSiloSession = self.missionStats.soldWheatPortSiloSession - trailer.lastFillDelta;                    
+                        
+                    	elseif trailer.currentFillType == Trailer.FILLTYPE_ENSILAGE then                        
+                        	if self.currentTipTrigger.isFarmTrigger then
+                        	   self.missionStats.farmSiloEnsilageAmount = self.missionStats.farmSiloEnsilageAmount - trailer.lastFillDelta; 
+                        	else
+                        	    self.missionStats.farmSiloEngraisAmount = self.missionStats.farmSiloEngraisAmount - trailer.lastFillDelta;                                            
+                       		end;                     
+                   		elseif trailer.currentFillType == Trailer.FILLTYPE_FUMIER then
+                        	if self.currentTipTrigger.isFarmTrigger then
+                            	self.missionStats.farmSiloFumierAmount = self.missionStats.farmSiloFumierAmount - trailer.lastFillDelta;                                              
+                        	end;
+                    	elseif trailer.currentFillType == Trailer.FILLTYPE_CURAGE then
+                        	if self.currentTipTrigger.isFarmTrigger then
+                            	self.missionStats.farmSiloFumierAmount = self.missionStats.farmSiloFumierAmount - trailer.lastFillDelta;                                              
+                        	end;
+                    	end
+                    end
                 end;
             end;
         end;
@@ -1035,7 +1582,7 @@ function MPupdate(dt)
 					--be prepared for crazy things and workarounds...
 
 					--saving the game before sending data
-					gameMenuSystem.serverMenu:saveSelectedGame();
+					--gameMenuSystem.serverMenu:saveSelectedGame(); disabling it because it crashes with ModAgri on Wine
 					copyFile(gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."/wheat_density.png", gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."/z_MPfake.file", false);
 		
 					--preparing file list
@@ -1206,13 +1753,77 @@ function MPmodifyVehicleScripts()
 		print("[LS2008MP] vehicle script Trailer not found (This might not be a problem)")
 	end
 	
-	--if ZG ~= nil then
-		--print("[LS2008MP] modified custom script ZG")
-	--else
-	--	print("[LS2008MP] custom script ZG not found (Maybe you just don't have it)")
-	--end
+	print("[LS2008MP] game script modification finished")
 	
-	print("[LS2008MP] script modification finished")
+	if CombineAP2 ~= nil then
+		--original.attachCutter = Combine.attachCutter
+		--original.detachCurrentCutter = Combine.detachCurrentCutter
+		--original.combineUpdate = Combine.update
+		--Combine.attachCutter = MPsyncAttachCutter
+		--Combine.detachCurrentCutter = MPsyncDetachCurrentCutter
+		--Combine.update = MPcombineUpdate
+		original.CombineAP2keyEvent = CombineAP2.keyEvent
+		CombineAP2.keyEvent = MPCombineAP2keyEvent
+		print("[LS2008MP] modified custom script CombineAP2")
+	else
+		print("[LS2008MP] custom script CombineAP2 not found (This might not be a problem)")
+	end
+	
+	if Lexion400AP ~= nil then
+		original.Lexion400APkeyEvent = Lexion400AP.keyEvent
+		Lexion400AP.keyEvent = MPLexion400APkeyEvent --using the same keyevent update as for CombineAP2
+		print("[LS2008MP] modified custom script Lexion400AP")
+	else
+		print("[LS2008MP] custom script Lexion400AP not found (This might not be a problem)")
+	end
+	
+	if ClaasJaguarAP ~= nil then
+		original.ClaasJaguarAPkeyEvent = ClaasJaguarAP.keyEvent
+		ClaasJaguarAP.keyEvent = MPClaasJaguarAPkeyEvent --using the same keyevent update as for CombineAP2
+		print("[LS2008MP] modified custom script ClaasJaguarAP")
+	else
+		print("[LS2008MP] custom script ClaasJaguarAP not found (This might not be a problem)")
+	end
+	
+	if PloughWithDrum ~= nil then
+		original.PloughWithDrumUpdate = PloughWithDrum.update
+		PloughWithDrum.update = MPPloughWithDrumUpdate
+		print("[LS2008MP] modified custom script PloughWithDrum")
+	else
+		print("[LS2008MP] custom script PloughWithDrum not found (This might not be a problem)")
+	end
+	
+	if ares ~= nil then
+		original.areskeyEvent = ares.keyEvent
+		original.aresUpdate = ares.update
+		ares.update = MParesUpdate
+		ares.keyEvent = MPareskeyEvent
+		print("[LS2008MP] modified custom script ares")
+	else
+		print("[LS2008MP] custom script ares not found (This might not be a problem)")
+	end
+	
+	if renault ~= nil then
+		original.renaultkeyEvent = renault.keyEvent
+		original.renaultUpdate = renault.update
+		renault.update = MPrenaultUpdate
+		renault.keyEvent = MPrenaultkeyEvent
+		print("[LS2008MP] modified custom script renault")
+	else
+		print("[LS2008MP] custom script renault not found (This might not be a problem)")
+	end
+	
+	if case ~= nil then
+		original.casekeyEvent = case.keyEvent
+		original.caseUpdate = case.update
+		case.keyEvent = MPcasekeyEvent
+		case.update = MPcaseUpdate
+		print("[LS2008MP] modified custom script case")
+	else
+		print("[LS2008MP] custom script case not found (This might not be a problem)")
+	end
+	
+	print("[LS2008MP] custom script modification finished")
 end
 
 --BaseMission loadVehicle function but with support for original game
@@ -1534,8 +2145,8 @@ function handleUDPmessage(msg, msgIP, msgPort)
     		if file ~= nil then
     			local receivedFile = split(file, ';')
 				print("[LS2008MP] receiving file ".. receivedFile[1])
-    			MPfileSave = assert(io.open(gameMenuSystem.quickPlayMenu:getSavegameDirectory(6).."/"..receivedFile[1], "wb"))
-				MPfileSave:write(b64dec(receivedFile[2]))
+    			--MPfileSave = assert(io.open(gameMenuSystem.quickPlayMenu:getSavegameDirectory(6).."/"..receivedFile[1], "wb"))
+				--MPfileSave:write(b64dec(receivedFile[2])) disabling because of ModAgri crashes
     		end
     		if status == "closed" then
     			print("[LS2008MP] saying bye to the TCP file server :(") 
@@ -1856,8 +2467,8 @@ function MPaddToPlayerList(hisName)
 			if MPplayers[i] == hisName then
 				MPplayerVehicle[i] = "none"
 				MPchangeInPlayerList(i,hisName,"N/A",MPport)
-				MPplayerNode[i] = loadI3DFile("data/scripts/multiplayer/farmer.i3d"); --loading the MP player i3d
-    			link(getRootNode(), MPplayerNode[i]) --linking the i3d to map (??)
+				--MPplayerNode[i] = loadI3DFile("data/scripts/multiplayer/farmer.i3d"); --loading the MP player i3d
+    			--link(getRootNode(), MPplayerNode[i]) --linking the i3d to map (??)
 			end
 		end
 	end
