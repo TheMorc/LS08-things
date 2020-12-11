@@ -3,7 +3,7 @@
 -- beware!, this is an incredible spaghetti code and although it works somehow i just don't recommend even trying to touch it
 -- because it may break out of sudden and not a single person will ever fix it. 
 -- @author  Richard Gráčik (mailto:r.gracik@gmail.com)
--- @date  10.11.2020 - 9.12.2020
+-- @date  10.11.2020 - 11.12.2020
 
 MPloaded = false
 MPversion = "0.11 luasockets"
@@ -83,6 +83,7 @@ function init()
 	original.loadVehicle = BaseMission.loadVehicle
 	
 	--rewrite update and draw functions with MP versions
+	print("[LS2008MP] main.lua injector - rewriting functions with MP version") -- just so it's a bit better to separate errors
 	update = MPupdate
 	draw = MPdraw
 	keyEvent = MPkeyEvent
@@ -97,21 +98,21 @@ function init()
 	print("[LS2008MP] main.lua injector - finished")
 		
 		
-	print("[LS2008MP] game/modpack detection")
-	if Barriere ~= nil  then
+	print("[LS2008MP] game/modpack detection") --detecting must be performed only after loading main.lua
+	if Barriere ~= nil then --i wasn't sure what script to use for comparing so i used this one, but i might change it to something else later on
 		print("[LS2008MP] Barriere script from ModAgri exists so seems like we are on ModAgri v2")
 		isModAgri = true
 		MPtimescaleUpdate = MPtimescaleUpdateModAgri
 	elseif g_i18n ~= nil then
-		print("[LS2008MP] g_i18n exists, seems like we are on the newer addon version of the game")
+		print("[LS2008MP] local g_i18n exists, seems like we are on the newer addon version of the game")
 		MPtimescaleUpdate = MPtimescaleUpdateAddon
 	elseif g_i18n == nil then
-		print("[LS2008MP] g_i18n is missing, seems like we are on the original game")
+		print("[LS2008MP] local g_i18n is missing, seems like we are on the original game")
 		isOriginalGame = true
 		MPtimescaleUpdate = MPtimescaleUpdateOriginal
 	else
-		print("[LS2008MP] unable to detect game or modpack, better report this to Morc")
-		MPtimescaleUpdate = MPtimescaleUpdateOriginal
+		print("[LS2008MP] well, unable to detect game or modpack, better report this to Morc")
+		MPtimescaleUpdate = MPtimescaleUpdateOriginal --failsafe fallback to original 
 	end
 	
 	
@@ -363,6 +364,16 @@ function MPleftVehicle(i, playerName)
     	end;
     	MPvehicle.lightsActive = false;
 			
+		--hide ModAgri player even if not playing on ModAgri
+    	if MPvehicle.chauffeur ~= nil then
+    		setVisibility(MPvehicle.chauffeur, false);  
+    	end	
+			
+		--hide player from the polish version of LS2008 - Farming Simulator Classic
+    	if self.characterNode ~= nil then
+	        setVisibility(self.characterNode, false);
+        end;
+			
 		for i=1,#MPplayers do
 			if playerName == MPplayers[i] then
 				setVisibility(MPplayerNode[i], true)
@@ -379,6 +390,16 @@ function MPenterVehicle(i, playerName)
 		--playSample(MPvehicle.motorSound, 0, 1, 0); 
     	Utils.setEmittingState(MPvehicle.exhaustParticleSystems, true)
     	MPvehicle.MPsitting = true
+    	
+    	--show ModAgri player even if not playing on ModAgri
+    	if MPvehicle.chauffeur ~= nil then
+    		setVisibility(MPvehicle.chauffeur, true);  
+    	end
+    	
+    	--show player from the polish version of LS2008 - Farming Simulator Classic
+    	if self.characterNode ~= nil then
+	        setVisibility(self.characterNode, true);
+        end;
     	
     	for i=1,#MPplayers do
 			if playerName == MPplayers[i] then
@@ -939,7 +960,73 @@ function MPLexion400APkeyEvent(self, unicode, sym, modifier, isDown)
 			self.autoRotateBackSpeed = self.autoRotateBackSpeedBackup;
         	printChat("Autopilot is not currently supported")
         end
-    end         
+    end      
+       
+    if self.isEntered then
+    	if isDown and sym == Input.KEY_o then
+			for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;frontduals;"..MPplayerName..";"..i..";"..tostring(self.frontduals))
+					else
+						handleUDPmessage("bc1;vehEvent;frontduals;"..MPplayerName..";"..i..";"..tostring(self.frontduals), MPip, MPport)
+					end
+				end
+			end
+		end; 
+	end
+end
+function MPLexion400APUpdate(self, dt)
+	original.Lexion400APUpdate(self, dt)
+	
+	if self.MPsitting then
+		if self.MPinputEvent == "frontduals" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.frontduals = true
+            else
+            	self.frontduals = false
+            end
+			setVisibility(self.dual1, self.frontduals);
+			setVisibility(self.dual2, self.frontduals);
+			setVisibility(self.single1, not self.frontduals);
+			setVisibility(self.single2, not self.frontduals);
+        end
+        
+        for i=1,table.getn(self.rotationParts) do
+            local x, y, z = getRotation(self.rotationParts[i].index);
+            local rot = {x,y,z};
+            local newRot = Utils.getMovedLimitedValues(rot, self.rotationParts[i].maxRot, self.rotationParts[i].minRot, 3, self.rotationParts[i].rotTime, dt, not self.GrainTankIsOpen);
+            setRotation(self.rotationParts[i].index, unpack(newRot));
+        end;
+        
+        rotate(self.cooler.node,dt*0.4,0,0);
+        
+        if self.attachedCutter ~= nil then
+        	rotate(self.graintankauger.node,0,0,-dt*0.4);
+			rotate(self.chaffspreader1.node,0,dt*0.3,0);
+			rotate(self.chaffspreader2.node,0,-dt*0.3,0);
+        	self.GrainTankIsOpen = true;
+       	else
+        	if self.grainTankFillLevel < (self.grainTankCapacity*0.25) then
+				self.GrainTankIsOpen = false;
+        	end;
+    	end;
+		
+		if self.frontduals then
+			self.ladderIsOpened = false;
+		else
+			if self.GrainTankIsOpen then
+				self.ladderIsOpened = true;
+			else
+				self.ladderIsOpened = false
+			end
+		end
+		
+		if self.stopped then	
+			self.stopped=false;
+		end;
+    end
 end
 function MPCombineAP2keyEvent(self, unicode, sym, modifier, isDown)
 	original.CombineAP2keyEvent(self, unicode, sym, modifier, isDown)
@@ -972,6 +1059,192 @@ function MPClaasJaguarAPkeyEvent(self, unicode, sym, modifier, isDown)
         	printChat("Autopilot is not currently supported")
         end
     end         
+end
+function MPCombine2keyEvent(self, unicode, sym, modifier, isDown)
+	original.Combine2keyEvent(self, unicode, sym, modifier, isDown)
+	if self.isEntered then
+		if isDown and sym==self.keys.stroh then
+			for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;hayOn;"..MPplayerName..";"..i..";"..tostring(self.hayOn))
+					else
+						handleUDPmessage("bc1;vehEvent;hayOn;"..MPplayerName..";"..i..";"..tostring(self.hayOn), MPip, MPport)
+					end
+				end
+			end
+		elseif isDown and sym==self.keys.pipe then
+			for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;fPipeOpen;"..MPplayerName..";"..i..";"..tostring(self.fPipeOpen))
+					else
+						handleUDPmessage("bc1;vehEvent;fPipeOpen;"..MPplayerName..";"..i..";"..tostring(self.fPipeOpen), MPip, MPport)
+					end
+				end
+			end
+		end;
+    end          
+end
+function MPCombine2attachCutter(self, cutter)
+	original.Combine2attachCutter(self, cutter)
+	for i=1, #g_currentMission.cutters do
+      	if g_currentMission.cutters[i] == cutter then
+    		if MPstate == "Client" then
+				MPudp:send("bc1;attachCutter;"..MPplayerName..";"..i)
+			else
+				handleUDPmessage("bc1;attachCutter;"..MPplayerName..";"..i, MPip, MPport)
+			end
+        end 	
+    end
+end
+function MPCombine2detachCurrentCutter(self)
+	if MPstate == "Client" then
+		MPudp:send("bc1;detachCurrentCutter;"..MPplayerName)
+	else
+		handleUDPmessage("bc1;detachCurrentCutter;"..MPplayerName, MPip, MPport)
+	end 	
+	
+	original.Combine2detachCurrentCutter(self)
+end
+function MPCombine2Update(self, dt, isActive)
+	original.Combine2Update(self, dt, isActive)
+	
+	if self.MPsitting then
+		
+		if self.MPinputEvent == "threshing" then --used on combines
+			self.MPinputEvent = ""
+			if self.grainTankFillLevel < self.grainTankCapacity then
+                if self.attachedCutter ~= nil then
+                    if self.MPeventState == "true" then
+                        self:startThreshing();
+                    else
+                        self:stopThreshing();
+                    end;
+                end;
+            end;
+        elseif self.MPinputEvent == "lowerCutter" then
+			self.MPinputEvent = ""
+            if self.attachedCutter ~= nil then
+            	if self.MPeventState == "true" then
+                	self.cutterAttacherJointMoveDown = true;
+                else
+                	self.cutterAttacherJointMoveDown = false
+                end
+            end;
+		elseif self.MPinputEvent == "pipe" then
+			self.MPinputEvent = ""
+			if self.MPeventState == "true" then
+				self.pipeOpening = true;
+			else
+				self.pipeOpening = false
+			end
+		elseif self.MPinputEvent == "fPipeOpen" then
+			self.MPinputEvent = ""
+			if self.MPeventState == "true" then
+				self.fPipeOpen = true;
+			else
+				self.fPipeOpen = false
+			end
+		elseif self.MPinputEvent == "hayOn" then
+			self.MPinputEvent = ""
+			if self.MPeventState == "true" then
+				self.hayOn = true;
+			else
+				self.hayOn = false
+			end
+		end
+		
+		--isEntered part of the combine code that needed to be stolen otherwise it wouldn't update just like the bit of code above
+		if self.attachedCutter ~= nil then
+		
+			local jointDesc = self.cutterAttacherJoint;
+        	if jointDesc.jointIndex ~= 0 then
+            if jointDesc.rotationNode ~= nil then
+                local x, y, z = getRotation(jointDesc.rotationNode);
+                local rot = {x,y,z};
+                local newRot = Utils.getMovedLimitedValues(rot, jointDesc.maxRot, jointDesc.minRot, 3, jointDesc.moveTime, dt, not self.cutterAttacherJointMoveDown);
+                setRotation(jointDesc.rotationNode, unpack(newRot));
+                for i=1, 3 do
+                    if math.abs(newRot[i] - rot[i]) > 0.001 then
+                        jointFrameInvalid = true;
+                    end;
+                end;
+            end;
+            if jointDesc.rotationNode2 ~= nil then
+                local x, y, z = getRotation(jointDesc.rotationNode2);
+                local rot = {x,y,z};
+                local newRot = Utils.getMovedLimitedValues(rot, jointDesc.maxRot2, jointDesc.minRot2, 3, jointDesc.moveTime, dt, not self.cutterAttacherJointMoveDown);
+                setRotation(jointDesc.rotationNode2, unpack(newRot));
+                for i=1, 3 do
+                    if math.abs(newRot[i] - rot[i]) > 0.001 then
+                        jointFrameInvalid = true;
+                    end;
+                end;
+            end;
+            if jointFrameInvalid then
+                setJointFrame(jointDesc.jointIndex, 0, jointDesc.jointTransform);
+            end;
+        	end;
+		
+        	local chopperBlindRotationSpeed = 0.001;
+        	local minRotX = -83*3.1415/180.0;
+        	if self.chopperBlind ~= nil then
+            local x,y,z = getRotation(self.chopperBlind);
+            if self.chopperActivated then
+                x = x-dt*chopperBlindRotationSpeed;
+                if x < minRotX then
+                    x = minRotX;
+                end;
+            else
+                x = x+dt*chopperBlindRotationSpeed;
+                if x > 0.0 then
+                    x = 0.0;
+                end;
+            end;
+            setRotation(self.chopperBlind, x, y, z);
+        	end;
+
+		end
+	end
+	
+	if self.isEntered then
+		if InputBinding.hasEvent(InputBinding.LOWER_IMPLEMENT) then
+           	for i=1, table.getn(g_currentMission.vehicles) do
+       			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+       				if self.attachedCutter ~= nil then
+       					if MPstate == "Client" then
+							MPudp:send("bc1;vehEvent;lowerCutter;"..MPplayerName..";"..i..";"..tostring(self.cutterAttacherJointMoveDown))
+						else
+							handleUDPmessage("bc1;vehEvent;lowerCutter;"..MPplayerName..";"..i..";"..tostring(self.cutterAttacherJointMoveDown), MPip, MPport)
+						end
+					end
+				end
+			end
+		elseif InputBinding.hasEvent(InputBinding.ACTIVATE_THRESHING) then
+          	for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if self.attachedCutter ~= nil then
+        				if MPstate == "Client" then
+							MPudp:send("bc1;vehEvent;threshing;"..MPplayerName..";"..i..";"..tostring(self.attachedCutter:isReelStarted()))
+						else
+							handleUDPmessage("bc1;vehEvent;threshing;"..MPplayerName..";"..i..";"..tostring(self.attachedCutter:isReelStarted()), MPip, MPport)
+						end
+					end
+				end
+			end
+        elseif InputBinding.hasEvent(InputBinding.EMPTY_GRAIN) then
+        	for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;pipe;"..MPplayerName..";"..i..";"..tostring(self.pipeOpening))
+					else
+						handleUDPmessage("bc1;vehEvent;pipe;"..MPplayerName..";"..i..";"..tostring(self.pipeOpening), MPip, MPport)
+					end
+				end
+			end
+		end
+	end
 end
 
 function MPPloughWithDrumUpdate(self, dt)
@@ -1441,6 +1714,203 @@ function MPcasekeyEvent(self, unicode, sym, modifier, isDown)
 	end
 end
 
+function MPNhUpdate(self, dt)
+	original.NhUpdate(self, dt)
+	
+	if self.MPsitting then
+		if self.MPinputEvent == "backwindow" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.rotationMaxbackwindow = true;
+            else
+            	self.rotationMaxbackwindow = false
+            end
+        elseif self.MPinputEvent == "porte" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.rotationMaxporte = true;
+            else
+            	self.rotationMaxporte = false
+            end
+		elseif self.MPinputEvent == "twinWheels" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.twinWheelsActive = true;
+				self.bigWheelsActive = false;
+        		self.jumWheelsActive = false;
+        		self.smallWheelsActive = false;
+            else
+            	self.twinWheelsActive = false;
+				self.bigWheelsActive = false;
+        		self.jumWheelsActive = false;
+        		self.smallWheelsActive = true;
+            end
+		elseif self.MPinputEvent == "jumWheels" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.jumWheelsActive = true;
+				self.twinWheelsActive = false;
+   		    	self.bigWheelsActive = false;
+    	    	self.smallWheelsActive = true;
+            else
+            	self.jumWheelsActive = false;
+				self.twinWheelsActive = false;
+   		    	self.bigWheelsActive = false;
+    	    	self.smallWheelsActive = true;
+            end
+		end	
+
+		if self.twinWheelsActive then
+			for i=1, self.numTwinWheels do
+				local twinWheel = self.twinWheels[i];
+				setVisibility(twinWheel, self.twinWheelsActive);
+			end;
+		else
+			for i=1, self.numTwinWheels do
+				local twinWheel = self.twinWheels[i];
+				setVisibility(twinWheel, self.twinWheelsActive, false);
+			end;
+		end;
+		
+		if self.smallWheelsActive then
+			for i=1, self.numSmallWheels do
+				local smallWheel = self.smallWheels[i];
+				setVisibility(smallWheel, self.smallWheelsActive);
+			end;
+		else
+			for i=1, self.numSmallWheels do
+				local smallWheel = self.smallWheels[i];
+				setVisibility(smallWheel, self.smallWheelsActive, false);
+			end;
+		end;
+       if not self.bigWheelsActive then
+			for i=1, self.numBigWheels do
+				local bigWheel = self.bigWheels[i];
+				setVisibility(bigWheel, self.bigWheelsActive, false);
+			end;
+		else
+			for i=1, self.numBigWheels do
+				local bigWheel = self.bigWheels[i];
+				setVisibility(bigWheel, self.bigWheelsActive);
+			end;
+		end;
+        if not self.jumWheelsActive then
+			for i=1, self.numjumWheels do
+				local jumWheel = self.jumWheels[i];
+				setVisibility(jumWheel, self.jumWheelsActive, false);
+			end;
+		else
+			for i=1, self.numjumWheels do
+				local jumWheel = self.jumWheels[i];
+				setVisibility(jumWheel, self.jumWheelsActive);
+			end;
+		end;
+	end
+end
+function MPNhkeyEvent(self, unicode, sym, modifier, isDown)
+	original.NhkeyEvent(self, unicode, sym, modifier, isDown)
+	
+	if self.isEntered then
+    	if isDown and sym == Input.KEY_9 then
+			for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
+					else
+						handleUDPmessage("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow), MPip, MPport)
+					end
+				end
+			end
+		end; 
+
+     	if isDown and sym == Input.KEY_p then 
+			for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
+					else
+						handleUDPmessage("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte), MPip, MPport)
+					end
+				end
+			end
+		end; 
+
+		if isDown and sym == Input.KEY_8 then
+    	    for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
+					else
+						handleUDPmessage("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive), MPip, MPport)
+					end
+				end
+			end
+		end;
+
+   		 if isDown and sym == Input.KEY_6 then
+    	    for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;twinWheels;"..MPplayerName..";"..i..";"..tostring(self.twinWheelsActive))
+					else
+						handleUDPmessage("bc1;vehEvent;twinWheels;"..MPplayerName..";"..i..";"..tostring(self.twinWheelsActive), MPip, MPport)
+					end
+				end
+			end
+		end;
+	end
+end
+
+function MPTedderUpdate(self, dt)
+	original.TedderUpdate(self, dt)
+	
+	if self.MPinputEvent == "rotation" then
+		self.MPinputEvent = ""
+        if self.MPeventState == "true" then
+           	self.rotationMaxRight = true
+			self.rotationMaxLeft  = true
+        else
+           	self.rotationMaxRight = false
+			self.rotationMaxLeft  = false
+    	end
+	elseif self.MPinputEvent == "haying" then
+		self.MPinputEvent = ""
+        if self.MPeventState == "true" then
+           	self.haying = true
+        else
+           	self.haying = false
+    	end
+	end		
+	
+	
+	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
+		for i=1, #g_currentMission.attachables do
+     			if g_currentMission.attachables[i] == self then
+       			if MPstate == "Client" then
+					MPudp:send("bc1;impEvent;haying;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxRight))
+				else
+					handleUDPmessage("bc1;impEvent;haying;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxRight), MPip, MPport)
+				end
+			end
+		end
+	end;
+end
+function MPTedderkeyEvent(self, unicode, sym, modifier, isDown)
+	original.TedderkeyEvent(self, unicode, sym, modifier, isDown)
+	
+    if isDown and sym == Input.KEY_n then
+		for i=1, #g_currentMission.attachables do
+     			if g_currentMission.attachables[i] == self then
+       			if MPstate == "Client" then
+					MPudp:send("bc1;impEvent;rotation;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxRight))
+				else
+					handleUDPmessage("bc1;impEvent;rotation;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxRight), MPip, MPport)
+				end
+			end
+		end
+	end
+end
+
 function MPfakeUpdate(dt)
 	return
 end
@@ -1677,8 +2147,15 @@ function MPupdate(dt)
 	
 end
 
---MP modify vehicle scripts, function called from MPoneTimeUpdate, function that also handles client sync
+--MP modify vehicle scripts, called from MPupdate
 function MPmodifyVehicleScripts()
+	local modifiedVeh = "[LS2008MP] modified vehicle script %s"
+	local modifiedCus = "[LS2008MP] modified custom script %s"
+	local noVehScript = "[LS2008MP] vehicle script %s not found (This might not be a problem)"
+	local noCusScript = "[LS2008MP] custom script %s not found (This might not be a problem)"
+	
+	print("[LS2008MP] postMission00load script update, do not panic unless necessary (just ask Morc if you're worried)")
+
 	if Mission00 ~= nil then
 		original.missionUpdate = Mission00.update
 		Mission00.update = MPmission00Update
@@ -1698,9 +2175,9 @@ function MPmodifyVehicleScripts()
 		Vehicle.detachImplement = MPsyncDetachImplement
 		Vehicle.handleDetachTrailerEvent = MPsyncDetachTrailer
 		Vehicle.attachTrailer = MPsyncAttachTrailer
-		print("[LS2008MP] modified vehicle script Vehicle")
+		print(string.format(modifiedVeh, "Vehicle"))
 	else
-		print("[LS2008MP] vehicle script Vehicle not found (This might not be a problem)")
+		print(string.format(noVehScript, "Vehicle"))
 	end
 	
 	if Combine ~= nil then
@@ -1710,33 +2187,33 @@ function MPmodifyVehicleScripts()
 		Combine.attachCutter = MPsyncAttachCutter
 		Combine.detachCurrentCutter = MPsyncDetachCurrentCutter
 		Combine.update = MPcombineUpdate
-		print("[LS2008MP] modified vehicle script Combine")
+		print(string.format(modifiedVeh, "Combine"))
 	else
-		print("[LS2008MP] vehicle script Combine not found (This might not be a problem)")
+		print(string.format(noVehScript, "Combine"))
 	end
 
 	if Plough ~= nil then
 		original.ploughUpdate = Plough.update
 		Plough.update = MPploughUpdate
-		print("[LS2008MP] modified vehicle script Plough")
+		print(string.format(modifiedVeh, "Plough"))
 	else
-		print("[LS2008MP] vehicle script Plough not found (This might not be a problem)")
+		print(string.format(noVehScript, "Plough"))
 	end
 	
 	if Sprayer ~= nil then
 		original.sprayerUpdate = Sprayer.update
 		Sprayer.update = MPsprayerUpdate
-		print("[LS2008MP] modified vehicle script Sprayer")
+		print(string.format(modifiedVeh, "Sprayer"))
 	else
-		print("[LS2008MP] vehicle script Sprayer not found (This might not be a problem)")
+		print(string.format(noVehScript, "Sprayer"))
 	end
 	
 	if Mower ~= nil then
 		original.mowerUpdate = Mower.update
 		Mower.update = MPmowerUpdate
-		print("[LS2008MP] modified vehicle script Mower")
+		print(string.format(modifiedVeh, "Mower"))
 	else
-		print("[LS2008MP] vehicle script Mower not found (This might not be a problem)")
+		print(string.format(noVehScript, "Mower"))
 	end
 	
 	if Trailer ~= nil then
@@ -1748,49 +2225,59 @@ function MPmodifyVehicleScripts()
 		Trailer.toggleTipState = MPtoggleTipState
 		Trailer.onStartTip = MPonStartTip
 		Trailer.handleDetachTrailerEvent = MPtrailerhandleDetachTrailerEvent
-		print("[LS2008MP] modified vehicle script Trailer")
+		print(string.format(modifiedVeh, "Trailer"))
 	else
-		print("[LS2008MP] vehicle script Trailer not found (This might not be a problem)")
+		print(string.format(noVehScript, "Trailer"))
 	end
-	
 	print("[LS2008MP] game script modification finished")
 	
+	
+	if Combine2 ~= nil then
+		original.Combine2attachCutter = Combine2.attachCutter
+		original.Combine2detachCurrentCutter = Combine2.detachCurrentCutter
+		original.Combine2Update = Combine2.update
+		Combine2.attachCutter = MPCombine2attachCutter
+		Combine2.detachCurrentCutter = MPCombine2detachCurrentCutter
+		Combine2.update = MPCombine2Update
+		original.Combine2keyEvent = Combine2.keyEvent
+		Combine2.keyEvent = MPCombine2keyEvent
+		print(string.format(modifiedCus, "Combine2"))
+	else
+		print(string.format(noCusScript, "Combine2"))
+	end
+	
 	if CombineAP2 ~= nil then
-		--original.attachCutter = Combine.attachCutter
-		--original.detachCurrentCutter = Combine.detachCurrentCutter
-		--original.combineUpdate = Combine.update
-		--Combine.attachCutter = MPsyncAttachCutter
-		--Combine.detachCurrentCutter = MPsyncDetachCurrentCutter
-		--Combine.update = MPcombineUpdate
 		original.CombineAP2keyEvent = CombineAP2.keyEvent
 		CombineAP2.keyEvent = MPCombineAP2keyEvent
-		print("[LS2008MP] modified custom script CombineAP2")
+		print(string.format(modifiedCus, "CombineAP2"))
 	else
-		print("[LS2008MP] custom script CombineAP2 not found (This might not be a problem)")
+		print(string.format(noCusScript, "CombineAP2"))
 	end
 	
 	if Lexion400AP ~= nil then
+		original.Lexion400APUpdate = Lexion400AP.update
 		original.Lexion400APkeyEvent = Lexion400AP.keyEvent
 		Lexion400AP.keyEvent = MPLexion400APkeyEvent --using the same keyevent update as for CombineAP2
-		print("[LS2008MP] modified custom script Lexion400AP")
+		Lexion400AP.update = MPLexion400APUpdate
+		print(string.format(modifiedCus, "Lexion400AP"))
 	else
-		print("[LS2008MP] custom script Lexion400AP not found (This might not be a problem)")
+		print(string.format(noCusScript, "Lexion400AP"))
 	end
 	
 	if ClaasJaguarAP ~= nil then
 		original.ClaasJaguarAPkeyEvent = ClaasJaguarAP.keyEvent
 		ClaasJaguarAP.keyEvent = MPClaasJaguarAPkeyEvent --using the same keyevent update as for CombineAP2
-		print("[LS2008MP] modified custom script ClaasJaguarAP")
+		print(string.format(modifiedCus, "ClaasJaguarAP"))
 	else
-		print("[LS2008MP] custom script ClaasJaguarAP not found (This might not be a problem)")
+		print(string.format(noCusScript, "ClaasJaguarAP"))
 	end
 	
 	if PloughWithDrum ~= nil then
 		original.PloughWithDrumUpdate = PloughWithDrum.update
 		PloughWithDrum.update = MPPloughWithDrumUpdate
-		print("[LS2008MP] modified custom script PloughWithDrum")
+		print(string.format(modifiedCus, "PloughWithDrum"))
 	else
-		print("[LS2008MP] custom script PloughWithDrum not found (This might not be a problem)")
+		print(string.format(noCusScript, "PloughWithDrum"))
 	end
 	
 	if ares ~= nil then
@@ -1798,9 +2285,9 @@ function MPmodifyVehicleScripts()
 		original.aresUpdate = ares.update
 		ares.update = MParesUpdate
 		ares.keyEvent = MPareskeyEvent
-		print("[LS2008MP] modified custom script ares")
+		print(string.format(modifiedCus, "ares"))
 	else
-		print("[LS2008MP] custom script ares not found (This might not be a problem)")
+		print(string.format(noCusScript, "ares"))
 	end
 	
 	if renault ~= nil then
@@ -1808,9 +2295,9 @@ function MPmodifyVehicleScripts()
 		original.renaultUpdate = renault.update
 		renault.update = MPrenaultUpdate
 		renault.keyEvent = MPrenaultkeyEvent
-		print("[LS2008MP] modified custom script renault")
+		print(string.format(modifiedCus, "renault"))
 	else
-		print("[LS2008MP] custom script renault not found (This might not be a problem)")
+		print(string.format(noCusScript, "renault"))
 	end
 	
 	if case ~= nil then
@@ -1818,9 +2305,36 @@ function MPmodifyVehicleScripts()
 		original.caseUpdate = case.update
 		case.keyEvent = MPcasekeyEvent
 		case.update = MPcaseUpdate
-		print("[LS2008MP] modified custom script case")
+		print(string.format(modifiedCus, "case"))
 	else
-		print("[LS2008MP] custom script case not found (This might not be a problem)")
+		print(string.format(noCusScript, "case"))
+	end
+	
+	if Nh ~= nil then
+		original.NhkeyEvent = Nh.keyEvent
+		original.NhUpdate = Nh.update
+		Nh.keyEvent = MPNhkeyEvent
+		Nh.update = MPNhUpdate
+		print(string.format(modifiedCus, "Nh"))
+	else
+		print(string.format(noCusScript, "Nh"))
+	end
+	
+	if Tedder ~= nil then
+		original.TedderUpdate = Tedder.update
+		original.TedderkeyEvent = Tedder.keyEvent
+		Tedder.update = MPTedderUpdate
+		Tedder.keyEvent = MPTedderkeyEvent
+		print(string.format(modifiedCus, "Tedder"))
+	else	
+		print(string.format(noCusScript, "Tedder"))
+	end
+	
+	if CutterAP ~= nil then
+		--start this mess lol
+		print(string.format(modifiedCus, "CutterAP"))
+	else
+		print(string.format(noCusScript, "CutterAP"))
 	end
 	
 	print("[LS2008MP] custom script modification finished")
@@ -1942,6 +2456,7 @@ function MPdraw()
     end
 	
 	if MPchat then
+		g_currentMission.missionStats.showPDA = false --hiding the PDA
 		hudMPchatTextField:render() 
 		renderText(0.0, 0.45, 0.03, MPchatText);
 	end
@@ -2071,6 +2586,11 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
 		end
 	end
 	
+	--putting chat keyevent above chat open to not block game keyevents
+	if not MPchat then
+		original.keyEvent(unicode, sym, modifier, isDown) --it's handling TAB, ESC and PDA but not input bindings for some weird reason, those are in update functions..
+	end
+	
 	--chat opening
 	if sym == MPchatKey and isDown and MPenabled then --open the chat
 		MPrenderHistory = true
@@ -2079,10 +2599,6 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
 		getInputAxis = MPfakeInputAxis --disabling input axis for movement
 		return
 	end;
-	
-	if not MPchat then
-		original.keyEvent(unicode, sym, modifier, isDown) --it's handling TAB, ESC and PDA but not input bindings for some weird reason, those are in update functions..
-	end
 end
 
 --fake InputBinding hasEvent and getInputAxis functions for chat
@@ -2352,6 +2868,17 @@ function handleUDPmessage(msg, msgIP, msgPort)
 			if p[2] == MPplayers[i] then
 				if MPplayerName ~= p[2] then
 					original.trailerhandleDetachTrailerEvent(g_currentMission.trailers[tonumber(p[2])])
+				end
+			end
+		end
+	elseif p[1] == "impEvent" then
+		for i=1,#MPplayers do
+			if p[3] == MPplayers[i] then
+				if MPplayerName ~= p[3] then
+					g_currentMission.attachables[tonumber(p[3])].MPinputEvent = p[2]
+					if p[5] ~= nil then
+						g_currentMission.attachables[tonumber(p[3])].MPeventState = p[5]
+					end
 				end
 			end
 		end
