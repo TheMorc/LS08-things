@@ -48,7 +48,7 @@ function serverLoading:update(dt)
         self.isLoaded = true;
     	g_currentMission.isRunning = true;
     	self.renderFrom = 2
-    	delete(g_missionLoaderDesc.overlayBriefing.overlayId);
+    	self.items[2] = Overlay:new("nil", "data/missions/mission00_briefing".. g_languageSuffix .. ".png", 0, 0, 0, 0) --replacing overlayBriefing with hidden overlay to not spam errors
         self.buttonOverlay = Overlay:new("play_button", "data/menu/ingame_play_button".. g_languageSuffix .. ".png", 0.5-0.15/2, 0.02, 0.15, 0.06);
         self:addItem(OverlayButton:new(self.buttonOverlay, OnserverLoadingFinish));
     end;

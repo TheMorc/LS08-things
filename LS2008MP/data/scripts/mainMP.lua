@@ -19,6 +19,7 @@ MPtcp = assert(socket.bind("*", 2008)) --it's fixed on port 2008 for now
 MPtcp:settimeout(10)
 clientTCP = assert(socket.tcp())
 clientTCP:settimeout(10)
+lastUDPmessage = ""
 
 --MP server-client variables
 MPstate = "none"  --global state of MP used by functions
@@ -38,6 +39,7 @@ MPchatHistory = {" ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " "
 MPrenderHistory = false;
 MPrenderHistoryCounterStart = os.time()
 MPrenderHistoryCounterEnd = MPrenderHistoryCounterStart+20  
+MPchatlogFilename = "chatlog_"..os.date("%d.%m.%Y_%H.%M.%S")..".txt"
 
 --MP player list
 MPplayers = {}
@@ -115,7 +117,6 @@ function init()
 		MPtimescaleUpdate = MPtimescaleUpdateOriginal --failsafe fallback to original 
 	end
 	
-	
 	print("[LS2008MP] loading multiplayer settings")
 	require("multiplayer") --load /multiplayer.lua settings file
 	if MPplayerNameRndNums then
@@ -185,6 +186,13 @@ function init()
 	gameMenuSystem.MPsettingsMenu:addItem(OverlayButton:new(Overlay:new("GUIMPsettingsSelectPort", "data/menu/missionmenu_background.png", 0.35, 0.302, 0.55, 0.06), MPsettingsMenuSelectPort));
 
 	consoleBackground = Overlay:new("GUIMPsettingsBackground", "data/menu/settings_background.png", 0, 0.47, 1, 0.53);
+	
+	print("[LS2008MP] creating chatlog " .. getUserProfileAppPath() .. "chatlogs/" .. MPchatlogFilename)
+	--creating chat log folder
+	createFolder(getUserProfileAppPath() .. "chatlogs/")
+	MPchatlogFile = io.open(getUserProfileAppPath() .. "chatlogs/" .. MPchatlogFilename, "w")
+	MPchatlogFile:write("[LS2008MP v" .. MPversion .. "] Chat log file created on " .. os.date("%d.%m.%Y %H:%M:%S") .. " | Player: " .. MPplayerName .. " | IP: " .. MPip .. ":" .. MPport)
+	MPchatlogFile:close()
 	
 	print("[LS2008MP v" .. MPversion .. "] initialized successfully, hooray!") 	
 	MPloaded = true
@@ -302,12 +310,8 @@ function MPclientMenuConnContinue()
     gameMenuSystem.loadScreen = serverLoading:new(OnLoadingScreen);
     gameMenuSystem.loadScreen:setScriptInfo(g_missionLoaderDesc.scriptFilename, g_missionLoaderDesc.scriptClass);
     gameMenuSystem.loadScreen:setMissionInfo(g_missionLoaderDesc.id, g_missionLoaderDesc.bronze, g_missionLoaderDesc.silver, g_missionLoaderDesc.gold);
-    --gameMenuSystem.loadScreen:addItem(g_missionLoaderDesc.backgroundOverlay);
+    gameMenuSystem.loadScreen:addItem(g_missionLoaderDesc.backgroundOverlay);
     gameMenuSystem.loadScreen:addItem(g_missionLoaderDesc.overlayBriefing);
-    --self.loadScreen:addItem(g_missionLoaderDesc.overlayBriefingMedals);
-
-    --gameMenuSystem.inGameMenu:setExtraOverlays(g_missionLoaderDesc.overlayBriefing);
-    --self.inGameMenu.missionId=g_missionLoaderDesc.id;
     gameMenuSystem.inGameMenu:setMissionId(g_missionLoaderDesc.id);
 
     gameMenuSystem.currentMenu = gameMenuSystem.loadScreen;
@@ -370,8 +374,8 @@ function MPleftVehicle(i, playerName)
     	end	
 			
 		--hide player from the polish version of LS2008 - Farming Simulator Classic
-    	if self.characterNode ~= nil then
-	        setVisibility(self.characterNode, false);
+    	if MPvehicle.characterNode ~= nil then
+	        setVisibility(MPvehicle.characterNode, false);
         end;
 			
 		for i=1,#MPplayers do
@@ -397,8 +401,8 @@ function MPenterVehicle(i, playerName)
     	end
     	
     	--show player from the polish version of LS2008 - Farming Simulator Classic
-    	if self.characterNode ~= nil then
-	        setVisibility(self.characterNode, true);
+    	if MPvehicle.characterNode ~= nil then
+	        setVisibility(MPvehicle.characterNode, true);
         end;
     	
     	for i=1,#MPplayers do
@@ -1882,10 +1886,9 @@ function MPTedderUpdate(self, dt)
     	end
 	end		
 	
-	
 	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
 		for i=1, #g_currentMission.attachables do
-     			if g_currentMission.attachables[i] == self then
+     		if g_currentMission.attachables[i] == self then
        			if MPstate == "Client" then
 					MPudp:send("bc1;impEvent;haying;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxRight))
 				else
@@ -1908,6 +1911,436 @@ function MPTedderkeyEvent(self, unicode, sym, modifier, isDown)
 				end
 			end
 		end
+	end
+end
+
+function MPCougarUpdate(self, dt)
+	original.CougarUpdate(self, dt)
+	
+	if self.MPsitting then
+		if self.MPinputEvent == "transport" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.transport = true;
+            else
+            	self.transport = false
+            end
+		elseif self.MPinputEvent == "globalDown" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.globalDown		  = true;
+				self.BackMowerLeft    = true;
+				self.BackMowerRight   = true;
+				self.MiddleMowerLeft  = true;
+				self.MiddleMowerRight = true;
+				self.FrontMower		  = true;
+				self.delay = 10;
+            else
+            	self.globalDown		  = false
+				self.BackMowerLeft    = false;
+				self.BackMowerRight   = false;
+				self.MiddleMowerLeft  = false;
+				self.MiddleMowerRight = false;
+				self.FrontMower		  = false;
+				self.delay = 10;
+            end
+		elseif self.MPinputEvent == "BackMowerRight" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.BackMowerRight = true;
+            else
+            	self.BackMowerRight = false
+            end
+		elseif self.MPinputEvent == "BackMowerLeft" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.BackMowerLeft = true;
+            else
+            	self.BackMowerLeft = false
+            end
+        elseif self.MPinputEvent == "MiddleMowerLeft" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.MiddleMowerLeft = true;
+            else
+            	self.MiddleMowerLeft = false
+            end
+        elseif self.MPinputEvent == "MiddleMowerRight" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.MiddleMowerRight = true;
+            else
+            	self.MiddleMowerRight = false
+            end
+        elseif self.MPinputEvent == "FrontMower" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.FrontMower = true;
+            else
+            	self.FrontMower = false
+            end
+		elseif self.MPinputEvent == "activeMower" then
+			self.MPinputEvent = ""
+            if self.MPeventState == "true" then
+            	self.activeMower = true;
+            else
+            	self.activeMower = false
+            end
+		end
+
+		if y < 0.1 then
+			self.dummyVar = true;			
+		else
+			self.dummyVar = false;
+		end;
+	
+		if self.transport then
+			invertAxis = 1;
+		else
+			invertAxis = -1;
+		end;	
+		
+		local xtemp3, ytemp3, ztemp3 = getRotation(self.rotationPart.node);
+		
+		if not self.activeMower then
+			self.BackMowerLeft    = false;
+			self.BackMowerRight   = false;
+			self.MiddleMowerLeft  = false;
+			self.MiddleMowerRight = false;
+			self.FrontMower		  = false;	
+		end;
+	
+		if self.kabine ~= nil then
+			local x, y, z = getRotation(self.kabine.node);
+			local rot = {x,y,z};
+			local newRot = Utils.getMovedLimitedValues(rot, self.kabine.maxRot, self.kabine.minRot, 3, self.kabine.rotTime, dt, self.transport);
+			setRotation(self.kabine.node, unpack(newRot));
+		end;
+	
+		if self.activeMower then
+			if self.delay == 0 then
+				if self.rotationPart ~= nil then
+					local x, y, z = getRotation(self.rotationPart.node);
+					local rot = {x,y,z};
+					local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart.maxRot, self.rotationPart.workingRot, 3, 2500 , dt, not self.BackMowerLeft);
+					setRotation(self.rotationPart.node, unpack(newRot));
+				end;
+				if self.rotationPart2 ~= nil then
+					local x, y, z = getRotation(self.rotationPart2.node);
+					local rot = {x,y,z};
+					local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart2.maxRot, self.rotationPart2.workingRot, 3, 2500, dt, not self.BackMowerRight);
+					setRotation(self.rotationPart2.node, unpack(newRot));
+				end;
+			else
+				self.delay = self.delay - 1;
+			end;
+			if self.rotationPart7 ~= nil then
+				local x, y, z = getRotation(self.rotationPart7.node);
+				local rot = {x,y,z};
+				local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart7.maxRot, self.rotationPart7.workingRot, 3, 2500, dt, not self.MiddleMowerLeft);
+				setRotation(self.rotationPart7.node, unpack(newRot));
+			end;
+			
+			if self.rotationPart8 ~= nil then
+				local x, y, z = getRotation(self.rotationPart8.node);
+				local rot = {x,y,z};
+				local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart8.maxRot, self.rotationPart8.workingRot, 3, 2500, dt, not self.MiddleMowerRight);
+				setRotation(self.rotationPart8.node, unpack(newRot));
+			end;
+			
+			if self.rotationPart9 ~= nil then
+				local x, y, z = getRotation(self.rotationPart9.node);
+				local rot = {x,y,z};
+				local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart9.maxRot, self.rotationPart9.minRot, 3, 2500, dt, not self.FrontMower);
+				setRotation(self.rotationPart9.node, unpack(newRot));
+			end;		
+		else			
+			local xtemp2, ytemp2, ztemp2 = getRotation(self.rotationPart.node);
+			if ztemp2 < -1.134464025497 and not self.transport then
+
+				if self.rotationPart ~= nil then
+					local x, y, z = getRotation(self.rotationPart.node);
+					local rot = {x,y,z};
+					local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart.maxRot, self.rotationPart.workingRot, 3, 2500, dt, not self.BackMowerLeft);
+					setRotation(self.rotationPart.node, unpack(newRot));
+				end;
+				if self.rotationPart2 ~= nil then
+					local x, y, z = getRotation(self.rotationPart2.node);
+					local rot = {x,y,z};
+					local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart2.maxRot, self.rotationPart2.workingRot, 3, 2500, dt, not self.BackMowerRight);
+					setRotation(self.rotationPart2.node, unpack(newRot));
+				end;
+
+				if self.rotationPart7 ~= nil then
+					local x, y, z = getRotation(self.rotationPart7.node);
+					local rot = {x,y,z};
+					local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart7.maxRot, self.rotationPart7.workingRot, 3, 2500, dt, not self.MiddleMowerLeft);
+					setRotation(self.rotationPart7.node, unpack(newRot));
+				end;
+				
+				if self.rotationPart8 ~= nil then
+					local x, y, z = getRotation(self.rotationPart8.node);
+					local rot = {x,y,z};
+					local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart8.maxRot, self.rotationPart8.workingRot, 3, 2500, dt, not self.MiddleMowerRight);
+					setRotation(self.rotationPart8.node, unpack(newRot));
+				end;
+				
+				if self.rotationPart9 ~= nil then
+					local x, y, z = getRotation(self.rotationPart9.node);
+					local rot = {x,y,z};
+					local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart9.maxRot, self.rotationPart9.minRot, 3, 2500, dt, not self.FrontMower);
+					setRotation(self.rotationPart9.node, unpack(newRot));
+				end;
+			else		
+				if self.rotationPart ~= nil then
+					local x, y, z = getRotation(self.rotationPart.node);
+					local rot = {x,y,z};
+					local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart.workingRot, self.rotationPart.minRot, 3, self.rotationPart.rotTime, dt, self.transport);
+					setRotation(self.rotationPart.node, unpack(newRot));
+				end;
+
+				if self.rotationPart2 ~= nil then
+					local x, y, z = getRotation(self.rotationPart2.node);
+					local rot = {x,y,z};
+					local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart2.workingRot, self.rotationPart2.minRot, 3, self.rotationPart2.rotTime, dt, self.transport);
+					setRotation(self.rotationPart2.node, unpack(newRot));
+				end;
+				
+				if self.rotationPart3 ~= nil then
+					local x, y, z = getRotation(self.rotationPart3.node);
+					local rot = {x,y,z};
+					local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart3.maxRot, self.rotationPart3.minRot, 3, self.rotationPart3.rotTime, dt, self.transport);
+					setRotation(self.rotationPart3.node, unpack(newRot));
+				end;
+				
+				if self.rotationPart4 ~= nil then
+					local x, y, z = getRotation(self.rotationPart4.node);
+					local rot = {x,y,z};
+					local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart4.maxRot, self.rotationPart4.minRot, 3, self.rotationPart4.rotTime, dt, self.transport);
+					setRotation(self.rotationPart4.node, unpack(newRot));
+				end;
+				
+				if self.rotationPart5 ~= nil then
+					local x, y, z = getRotation(self.rotationPart5.node);
+					local rot = {x,y,z};
+					local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart5.maxRot, self.rotationPart5.minRot, 3, self.rotationPart5.rotTime, dt, self.transport);
+					setRotation(self.rotationPart5.node, unpack(newRot));
+				end;
+					
+				if self.rotationPart6 ~= nil then
+					local x, y, z = getRotation(self.rotationPart6.node);
+					local rot = {x,y,z};
+					local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart6.maxRot, self.rotationPart6.minRot, 3, self.rotationPart6.rotTime, dt, self.transport);
+					setRotation(self.rotationPart6.node, unpack(newRot));
+				end;
+				
+				if self.rotationPart7 ~= nil then
+					local x, y, z = getRotation(self.rotationPart7.node);
+					local rot = {x,y,z};
+					local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart7.workingRot, self.rotationPart7.minRot, 3, self.rotationPart7.rotTime, dt, self.transport);
+					setRotation(self.rotationPart7.node, unpack(newRot));
+				end;
+				
+				if self.rotationPart8 ~= nil then
+					local x, y, z = getRotation(self.rotationPart8.node);
+					local rot = {x,y,z};
+					local newRot = Utils.getMovedLimitedValues(rot, self.rotationPart8.workingRot, self.rotationPart8.minRot, 3, self.rotationPart8.rotTime, dt, self.transport);
+					setRotation(self.rotationPart8.node, unpack(newRot));
+				end;
+				
+				if self.Arm1 ~= nil then
+					local x, y, z = getTranslation(self.Arm1.node);
+					local trans = {x,y,z};
+					local newTrans = Utils.getMovedLimitedValues(trans, self.Arm1.maxHeight, self.Arm1.minHeight, 3, self.Arm1.moveTime, dt, self.transport);
+					setTranslation(self.Arm1.node, unpack(newTrans));
+				end;
+				
+				if self.Arm2 ~= nil then
+					local x, y, z = getTranslation(self.Arm2.node);
+					local trans = {x,y,z};
+					local newTrans = Utils.getMovedLimitedValues(trans, self.Arm2.maxHeight, self.Arm2.minHeight, 3, self.Arm2.moveTime, dt, self.transport);
+					setTranslation(self.Arm2.node, unpack(newTrans));
+				end;
+			end;
+		end;
+		
+		if self.activeMower then
+			if self.drumNode1 ~= nil then
+	            rotate(self.drumNode1, self.drumRotationScale * 2.2*100, 0, 0);
+	        end;
+			if self.drumNode2 ~= nil then
+	            rotate(self.drumNode2, self.drumRotationScale * 2.2*100, 0, 0);
+	        end;
+			if self.drumNode3 ~= nil then
+	            rotate(self.drumNode3, self.drumRotationScale * 2.2*100, 0, 0);
+	        end;
+			if self.drumNode4 ~= nil then
+	            rotate(self.drumNode4, self.drumRotationScale * 2.2*100, 0, 0);
+	        end;
+			if self.drumNode5 ~= nil then
+	            rotate(self.drumNode5, self.drumRotationScale * 2.2*100, 0, 0);
+	        end;
+			
+			self.wasToFast = false;
+			local toFast = self.lastSpeed*3600 > 31;
+			
+			local lastAreaFrontMower = 0;
+			local lastAreaMiddleMowerLeft = 0;
+			local lastAreaMiddleMowerRight = 0;
+			local lastAreaBackMowerLeft = 0;
+			local lastAreaBackMowerRight = 0;
+			for i=1, table.getn(self.cuttingAreas) do
+				local x,y,z = getWorldTranslation(self.cuttingAreas[i].start);
+				local x1,y1,z1 = getWorldTranslation(self.cuttingAreas[i].width);
+				local x2,y2,z2 = getWorldTranslation(self.cuttingAreas[i].height);				
+				if i==1 then
+					local xtemp,ytemp,ztemp = getRotation(self.rotationPart9.node);
+					if xtemp < -0.42 and not toFast then
+						Utils.updateMeadowArea(x, z, x1, z1, x2, z2);
+						lastAreaFrontMower = Utils.updateCuttedMeadowArea(x, z, x1, z1, x2, z2);
+					end;
+				elseif i==2 then
+					if lastAreaFrontMower > 0 and not toFast then
+						Utils.putHayAt(x, z, x1, z1, x2, z2);
+					end;
+				elseif i==3 then
+					local xtemp,ytemp,ztemp = getRotation(self.rotationPart8.node);
+					if ztemp < -1.56 and not toFast then
+						Utils.updateMeadowArea(x, z, x1, z1, x2, z2);
+						lastAreaMiddleMowerLeft = Utils.updateCuttedMeadowArea(x, z, x1, z1, x2, z2);	
+					end;
+				elseif i==4 then
+					if lastAreaMiddleMowerLeft > 0 and not toFast then
+						Utils.putHayAt(x, z, x1, z1, x2, z2);
+					end;
+				elseif i==5 then
+					local xtemp,ytemp,ztemp = getRotation(self.rotationPart7.node);
+					if ztemp > 1.56 and not toFast then
+						Utils.updateMeadowArea(x, z, x1, z1, x2, z2);
+						lastAreaMiddleMowerRight = Utils.updateCuttedMeadowArea(x, z, x1, z1, x2, z2);
+					end;
+				elseif i==6 then
+					if lastAreaMiddleMowerRight > 0 and not toFast then
+						Utils.putHayAt(x, z, x1, z1, x2, z2);
+					end;
+				elseif i==7 then
+					local xtemp,ytemp,ztemp = getRotation(self.rotationPart2.node);
+					if ztemp > 1.49 and not toFast then
+						Utils.updateMeadowArea(x, z, x1, z1, x2, z2);
+						lastAreaBackMowerLeft = Utils.updateCuttedMeadowArea(x, z, x1, z1, x2, z2);						
+					end;
+				elseif i==8 then
+					if lastAreaBackMowerLeft > 0 and not toFast then
+						Utils.putHayAt(x, z, x1, z1, x2, z2);
+					end;
+				elseif i==9 then
+					local xtemp,ytemp,ztemp = getRotation(self.rotationPart.node);
+					if ztemp < -1.49 and not toFast then
+						Utils.updateMeadowArea(x, z, x1, z1, x2, z2);
+						lastAreaBackMowerRight = Utils.updateCuttedMeadowArea(x, z, x1, z1, x2, z2);
+					end;
+				elseif i==10 then
+					if lastAreaBackMowerRight > 0 and not toFast then
+						Utils.putHayAt(x, z, x1, z1, x2, z2);
+					end;
+				end;				
+			end;
+			self.wasToFast = toFast;
+		end;
+	end
+	
+	if self.isEntered then
+		if self.dummyVar then
+			if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
+				for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				if MPstate == "Client" then
+							MPudp:send("bc1;vehEvent;activeMower;"..MPplayerName..";"..i..";"..tostring(self.activeMower))
+						else
+							handleUDPmessage("bc1;vehEvent;activeMower;"..MPplayerName..";"..i..";"..tostring(self.activeMower), MPip, MPport)
+						end
+					end
+				end
+			end;
+		end;
+	end
+end
+function MPCougarkeyEvent(self, unicode, sym, modifier, isDown)
+	original.CougarkeyEvent(self, unicode, sym, modifier, isDown)
+	
+	if self.isEntered then
+		local xtemp3, ytemp3, ztemp3 = getRotation(self.rotationPart.node);
+    	if isDown and sym == Input.KEY_x and self.lastSpeed < 0.0001 and not self.activeMower and ztemp3 > -1.1345 then
+			for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;transport;"..MPplayerName..";"..i..";"..tostring(self.transport))
+					else
+						handleUDPmessage("bc1;vehEvent;transport;"..MPplayerName..";"..i..";"..tostring(self.transport), MPip, MPport)
+					end
+				end
+			end
+		elseif isDown and sym == Input.KEY_space and self.activeMower then
+    	    for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;globalDown;"..MPplayerName..";"..i..";"..tostring(self.globalDown))
+					else
+						handleUDPmessage("bc1;vehEvent;globalDown;"..MPplayerName..";"..i..";"..tostring(self.globalDown), MPip, MPport)
+					end
+				end
+			end
+		elseif isDown and sym == Input.KEY_n and self.activeMower then
+    	    for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;BackMowerRight;"..MPplayerName..";"..i..";"..tostring(self.BackMowerRight))
+					else
+						handleUDPmessage("bc1;vehEvent;BackMowerRight;"..MPplayerName..";"..i..";"..tostring(self.BackMowerRight), MPip, MPport)
+					end
+				end
+			end
+		elseif isDown and sym == Input.KEY_m and self.activeMower then
+    	    for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;BackMowerLeft;"..MPplayerName..";"..i..";"..tostring(self.BackMowerLeft))
+					else
+						handleUDPmessage("bc1;vehEvent;BackMowerLeft;"..MPplayerName..";"..i..";"..tostring(self.BackMowerLeft), MPip, MPport)
+					end
+				end
+			end
+		elseif isDown and sym == Input.KEY_j and self.activeMower then
+    	    for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;MiddleMowerLeft;"..MPplayerName..";"..i..";"..tostring(self.MiddleMowerLeft))
+					else
+						handleUDPmessage("bc1;vehEvent;MiddleMowerLeft;"..MPplayerName..";"..i..";"..tostring(self.MiddleMowerLeft), MPip, MPport)
+					end
+				end
+			end
+		elseif isDown and sym == Input.KEY_l and self.activeMower then
+    	    for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;MiddleMowerRight;"..MPplayerName..";"..i..";"..tostring(self.MiddleMowerRight))
+					else
+						handleUDPmessage("bc1;vehEvent;MiddleMowerRight;"..MPplayerName..";"..i..";"..tostring(self.MiddleMowerRight), MPip, MPport)
+					end
+				end
+			end
+		elseif isDown and sym == Input.KEY_k and self.activeMower then
+    	    for i=1, table.getn(g_currentMission.vehicles) do
+        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        			if MPstate == "Client" then
+						MPudp:send("bc1;vehEvent;FrontMower;"..MPplayerName..";"..i..";"..tostring(self.FrontMower))
+					else
+						handleUDPmessage("bc1;vehEvent;FrontMower;"..MPplayerName..";"..i..";"..tostring(self.FrontMower), MPip, MPport)
+					end
+				end
+			end
+		end;
 	end
 end
 
@@ -2101,7 +2534,7 @@ function MPupdate(dt)
 						if g_currentMission.vehicles[i].isEntered and (g_currentMission.vehicles[i].lastSpeed*3600) >= 1 then
 							local tempTX, tempTY, tempTZ = getTranslation(g_currentMission.vehicles[i].rootNode)
 							local tempRX, tempRY, tempRZ = getRotation(g_currentMission.vehicles[i].rootNode)
-							UDPmoverot = "bc1;moverot;".. i..";"..(round(tempTX+0,2))..";"..(round(tempTY+0,2))..";"..(round(tempTZ+0,2)) .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
+							UDPmoverot = "bc1;moverot;".. i..";"..(round(tempTX+0,1))..";"..(round(tempTY+0,1))..";"..(round(tempTZ+0,1)) .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
 							if MPstate == "Client" then
 								MPudp:send(UDPmoverot)
 							else
@@ -2112,7 +2545,7 @@ function MPupdate(dt)
 				
 					if g_currentMission.controlPlayer then
 						if Player.lastXPos ~= currXPos or Player.lastYPos ~= currYPos or Player.lastZPos ~= currZPos then
-							UDPmoverot = "bc1;plr;"..MPplayerName..";"..(round(Player.lastXPos+0,2))..";"..(round(Player.lastYPos+0,2))..";"..(round(Player.lastZPos+0,2)) -- .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
+							UDPmoverot = "bc1;plr;"..MPplayerName..";"..(round(Player.lastXPos+0,1))..";"..(round(Player.lastYPos+0,1))..";"..(round(Player.lastZPos+0,1)) -- .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
 							if MPstate == "Client" then
 								MPudp:send(UDPmoverot)
 							else
@@ -2121,8 +2554,8 @@ function MPupdate(dt)
 						--print(UDPmoverot)
 						end
 				
-						if Player.rotX ~= currXRot or Player.rotY ~= currYRot then
-							UDPmoverot = "bc1;plrot;"..MPplayerName..";"..(round(Player.rotY+0,2))
+						if round(Player.rotY+0,1) ~= currYRot then
+							UDPmoverot = "bc1;plrot;"..MPplayerName..";"..(round(Player.rotY+0,1))
 							if MPstate == "Client" then
 								MPudp:send(UDPmoverot)
 							else
@@ -2130,10 +2563,10 @@ function MPupdate(dt)
 							end
 						end
 					
-						currXPos = Player.lastXPos
-						currYPos = Player.lastYPos
-						currZPos = Player.lastZPos
-						currYRot = Player.rotY
+						local currXPos = Player.lastXPos
+						local currYPos = Player.lastYPos
+						local currZPos = Player.lastZPos
+						local currYRot = round(Player.rotY+0,1) --rounding Y rot to not spam client/servers with the same rotation
 					end
 					MPupdateTick1 = 0
 				end
@@ -2337,6 +2770,16 @@ function MPmodifyVehicleScripts()
 		print(string.format(noCusScript, "CutterAP"))
 	end
 	
+	if Cougar ~= nil then
+		original.CougarUpdate = Cougar.update
+		original.CougarkeyEvent = Cougar.keyEvent
+		Cougar.update = MPCougarUpdate
+		Cougar.keyEvent = MPCougarkeyEvent
+		print(string.format(modifiedCus, "Cougar"))
+	else
+		print(string.format(noCusScript, "Cougar"))
+	end
+	
 	print("[LS2008MP] custom script modification finished")
 end
 
@@ -2426,6 +2869,7 @@ function MPdraw()
 	local MPgameText = "LS2008MP v" .. MPversion
 	if MPrenderDebugText == true then
 		MPgameText = "LS2008MP v" .. MPversion .. " | " .. MPstate .. " | Name: " .. MPplayerName .. " | IP: " .. MPip .. ":" .. MPport
+		renderText(0.0, 0.96, 0.02, lastUDPmessage) --handy last message render thing, useful for finding some bugs
 	end
 	renderText(0.0, 0.98, 0.02, MPgameText);
 	setTextBold(false);
@@ -2435,6 +2879,7 @@ function MPdraw()
 			if MPplayers[i] ~= MPplayerName and MPplayers[i] ~= "N/A" then
     			setTextBold(true);
 				setTextColor(0,1,1,1)
+				local x, y, z = 0, 0, 0
 				if MPplayerVehicle[i] ~= "none" then
 					x, y, z = getWorldTranslation(g_currentMission.vehicles[tonumber(MPplayerVehicle[i])].rootNode); 
 					--local vx, vy, vz = getWorldTranslation(self.attachables[i].attacherJoint);
@@ -2648,6 +3093,7 @@ end
 
 --the biggest function, the main sncer
 function handleUDPmessage(msg, msgIP, msgPort)
+	lastUDPmessage = msg
 	local p = split(msg, ';')
 	if p[1] == "chat" then --CLIENT print message on client
 		print("[LS2008MP] chat: " .. p[2])
@@ -2875,9 +3321,9 @@ function handleUDPmessage(msg, msgIP, msgPort)
 		for i=1,#MPplayers do
 			if p[3] == MPplayers[i] then
 				if MPplayerName ~= p[3] then
-					g_currentMission.attachables[tonumber(p[3])].MPinputEvent = p[2]
+					g_currentMission.attachables[tonumber(p[4])].MPinputEvent = p[2]
 					if p[5] ~= nil then
-						g_currentMission.attachables[tonumber(p[3])].MPeventState = p[5]
+						g_currentMission.attachables[tonumber(p[4])].MPeventState = p[5]
 					end
 				end
 			end
@@ -3008,6 +3454,10 @@ end
 
 --function used through the code to split and print a message to the chat
 function printChat(chatText)
+	--open, append and close the chatlog file
+	MPchatlogFile = io.open(getUserProfileAppPath() .. "chatlogs/" .. MPchatlogFilename, "a")
+	MPchatlogFile:write("\r\n" .. chatText)
+	MPchatlogFile:close()
 	--38 chars per line
     local s = {}
     for i=1, #chatText, 38 do

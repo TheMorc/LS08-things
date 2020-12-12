@@ -37,8 +37,8 @@ function serverMenu:new(backgroundOverlay)
 
     instance.imageSize = (1 - (instance.backPlayButtonSpacing + 3*instance.buttonHeight + 2*instance.upDownButtonSpacing + 5*instance.imageSpacing))/4;
 
-    instance.quickPlayBriefingOverlay = Overlay:new("background01",  "data/menu/background01".. g_languageSuffix .. ".png", 0, 0, 1, 1);
-    instance.quickPlayBriefingBackgroundOverlay = backgroundOverlay;
+    instance.quickPlayBriefingOverlay = Overlay:new("quickPlayOverlayBriefing", "data/missions/mission00_briefing".. g_languageSuffix .. ".png", instance.briefingX, instance.briefingY, instance.briefingWidth, instance.briefingHeigth);
+    instance.quickPlayBriefingBackgroundOverlay = Overlay:new("background01",  "data/menu/background01".. g_languageSuffix .. ".png", 0, 0, 1, 1);
 
     instance.avatars = {};
     table.insert(instance.avatars, Overlay:new("avatar01Overlay", "data/missions/mission00_avatar01.png", 0, 0, instance.imageSize*0.75, instance.imageSize));
@@ -274,7 +274,7 @@ function serverMenu:startSelectedGame()
     gameMenuSystem.loadScreen = serverLoading:new(OnLoadingScreen);
     gameMenuSystem.loadScreen:setScriptInfo(g_missionLoaderDesc.scriptFilename, g_missionLoaderDesc.scriptClass);
     gameMenuSystem.loadScreen:setMissionInfo(g_missionLoaderDesc.id, g_missionLoaderDesc.bronze, g_missionLoaderDesc.silver, g_missionLoaderDesc.gold);
-    --gameMenuSystem.loadScreen:addItem(g_missionLoaderDesc.backgroundOverlay);
+    gameMenuSystem.loadScreen:addItem(g_missionLoaderDesc.backgroundOverlay);
     gameMenuSystem.loadScreen:addItem(g_missionLoaderDesc.overlayBriefing);
     gameMenuSystem.inGameMenu:setMissionId(g_missionLoaderDesc.id);
 
