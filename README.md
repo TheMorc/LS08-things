@@ -1,15 +1,14 @@
-# LS08-things
+# [Landwirtschafts Simulator 2008 - LS08-things](http://themorc.github.io/LS08-things/)
 This is a Landwirtschafts Simulator 2008 / Farming Simulator 2008 repository.
+This readme is deprecated and is replaced by [this site](http://themorc.github.io/LS08-things/).
+
 
 It includes:
 * LSMS Mod Utility decompilation
 * LSToolkit src code
 * LS2008MP (Landwirtschafts Simulator 2008 Multiplayer) src code
-* ~~(maybe also) GIANTSi3dFormatConvertor src code~~ This thing doesn't exist yet...
 * both versions of i3d Blender Exporter for GIANTS Editor v0.2.5-4.0.0
 * unpacked scripts.zip
-
-and hopefully even more things to come..
 
 ## Passwords
 `411S6R5772V673kT` password for most versions of the game
