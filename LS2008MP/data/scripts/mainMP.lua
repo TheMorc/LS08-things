@@ -3,7 +3,7 @@
 -- beware!, this is an incredible spaghetti code and although it works somehow i just don't recommend even trying to touch it
 -- because it may break out of sudden and not a single person will ever fix it. 
 -- @author  Richard Gráčik (mailto:r.gracik@gmail.com)
--- @date  10.11.2020 - 11.12.2020
+-- @date  10.11.2020 - 13.12.2020
 
 MPloaded = false
 MPversion = "0.11 luasockets"
@@ -190,7 +190,7 @@ function init()
 	print("[LS2008MP] creating chatlog " .. getUserProfileAppPath() .. "chatlogs/" .. MPchatlogFilename)
 	--creating chat log folder
 	createFolder(getUserProfileAppPath() .. "chatlogs/")
-	MPchatlogFile = io.open(getUserProfileAppPath() .. "chatlogs/" .. MPchatlogFilename, "w")
+	MPchatlogFile = io.open(getUserProfileAppPath() .. "chatlogs/" .. MPchatlogFilename, "a")
 	MPchatlogFile:write("[LS2008MP v" .. MPversion .. "] Chat log file created on " .. os.date("%d.%m.%Y %H:%M:%S") .. " | Player: " .. MPplayerName .. " | IP: " .. MPip .. ":" .. MPport)
 	MPchatlogFile:close()
 	
@@ -2534,7 +2534,7 @@ function MPupdate(dt)
 						if g_currentMission.vehicles[i].isEntered and (g_currentMission.vehicles[i].lastSpeed*3600) >= 1 then
 							local tempTX, tempTY, tempTZ = getTranslation(g_currentMission.vehicles[i].rootNode)
 							local tempRX, tempRY, tempRZ = getRotation(g_currentMission.vehicles[i].rootNode)
-							UDPmoverot = "bc1;moverot;".. i..";"..(round(tempTX+0,1))..";"..(round(tempTY+0,1))..";"..(round(tempTZ+0,1)) .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
+							local UDPmoverot = "bc1;moverot;".. i..";"..(round(tempTX+0,1))..";"..(round(tempTY+0,1))..";"..(round(tempTZ+0,1)) .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
 							if MPstate == "Client" then
 								MPudp:send(UDPmoverot)
 							else
@@ -2543,19 +2543,19 @@ function MPupdate(dt)
 						end
 					end
 				
-					if g_currentMission.controlPlayer then
+					if g_currentMission.controlPlayer then						
 						if Player.lastXPos ~= currXPos or Player.lastYPos ~= currYPos or Player.lastZPos ~= currZPos then
-							UDPmoverot = "bc1;plr;"..MPplayerName..";"..(round(Player.lastXPos+0,1))..";"..(round(Player.lastYPos+0,1))..";"..(round(Player.lastZPos+0,1)) -- .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
+							local UDPmoverot = "bc1;plr;"..MPplayerName..";"..(round(Player.lastXPos+0,1))..";"..(round(Player.lastYPos+0,1))..";"..(round(Player.lastZPos+0,1)) -- .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
 							if MPstate == "Client" then
 								MPudp:send(UDPmoverot)
 							else
 								handleUDPmessage(UDPmoverot, MPip, MPport)
 							end
-						--print(UDPmoverot)
+							print(UDPmoverot)
 						end
 				
 						if round(Player.rotY+0,1) ~= currYRot then
-							UDPmoverot = "bc1;plrot;"..MPplayerName..";"..(round(Player.rotY+0,1))
+							local UDPmoverot = "bc1;plrot;"..MPplayerName..";"..(round(Player.rotY+0,1))
 							if MPstate == "Client" then
 								MPudp:send(UDPmoverot)
 							else
@@ -2563,10 +2563,10 @@ function MPupdate(dt)
 							end
 						end
 					
-						local currXPos = Player.lastXPos
-						local currYPos = Player.lastYPos
-						local currZPos = Player.lastZPos
-						local currYRot = round(Player.rotY+0,1) --rounding Y rot to not spam client/servers with the same rotation
+						currXPos = Player.lastXPos
+						currYPos = Player.lastYPos
+						currZPos = Player.lastZPos
+						currYRot = round(Player.rotY+0,1) --rounding Y rot to not spam client/servers with the same rotation
 					end
 					MPupdateTick1 = 0
 				end
@@ -3062,7 +3062,7 @@ function MPClientHeartbeat()
 		print("[LS2008MP] starting client connection to " .. MPip .. ":" .. MPport)
 		--local translatedIP = socket.try(socket.dns.toip(MPip))
 		MPudp:setpeername(MPip, MPport)
-		MPudp:send("login;".. MPplayerName)
+		MPudp:send("login;" .. MPplayerName .. ";" .. MPversion)
 		MPaddToPlayerList(MPplayerName)
 		MPchangeInPlayerList(#MPplayers,MPplayerName,"local",MPport)
 	end
@@ -3328,6 +3328,9 @@ function handleUDPmessage(msg, msgIP, msgPort)
 				end
 			end
 		end
+	elseif p[1] == "otherVersion" then
+		print("[LS2008MP] you aren't running the same version of LS2008MP as the server host...")
+		printChat("You are running a different version of LS2008MP as the server host.")
 	elseif p[1] == "bc1" then --SERVER broadcast the message to all clients
 		for i,player in ipairs(MPplayers) do
 			if i>1 then
@@ -3344,6 +3347,11 @@ function handleUDPmessage(msg, msgIP, msgPort)
         	MPudp:sendto("doNotConnect", msgIP, msgPort)
         	print("[LS2008MP] " .. p[2] .. " not connected because he has the same name as you..")
         	return
+        end
+        if p[3] ~= MPversion then
+        	MPudp:sendto("otherVersion", msgIP, msgPort)
+        	print("[LS2008MP] beware, " .. p[2] .. " is running LS2008MP v" .. p[3] .. " (instead of " .. MPversion .. ")")
+        	printChat("Warning: " .. p[2] .. " is running LS2008MP v" .. p[3] .. ", messy things could start to happen")
         end
 		handleUDPmessage("bc1;chat;"..p[2] .. " joined the game", msgIP, msgPort)
 		handleUDPmessage("bc1;playerConnecting;"..p[2], msgIP, msgPort)
@@ -3456,7 +3464,7 @@ end
 function printChat(chatText)
 	--open, append and close the chatlog file
 	MPchatlogFile = io.open(getUserProfileAppPath() .. "chatlogs/" .. MPchatlogFilename, "a")
-	MPchatlogFile:write("\r\n" .. chatText)
+	MPchatlogFile:write(chatText .. "\n")
 	MPchatlogFile:close()
 	--38 chars per line
     local s = {}
