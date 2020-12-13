@@ -1,0 +1,396 @@
+<!-- 
+ i3D File Format - Schema
+ author(s): Christian Ammann, Stefan Geiger, Bosshard Patrick
+ created..: 12/03/03
+ modified.: 28/05/07
+ version..: 1.5c
+ see......: http://www.w3c.org
+-->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+	<xsd:annotation>
+		<xsd:documentation xml:lang="en">i3D file format</xsd:documentation>
+	</xsd:annotation>
+	<xsd:element name="i3D" type="i3DType"/>
+	<!-- Custom simple types -->
+	<xsd:simpleType name="doubleListType">
+		<xsd:list itemType="xsd:double"/>
+	</xsd:simpleType>
+	<xsd:simpleType name="intListType">
+		<xsd:list itemType="xsd:integer"/>
+	</xsd:simpleType>
+	<xsd:simpleType name="uv_coordType">
+		<xsd:restriction base="doubleListType">
+			<xsd:length value="2"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="xyz_coordType">
+		<xsd:restriction base="doubleListType">
+			<xsd:length value="3"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="xyzw_coordType">
+		<xsd:restriction base="doubleListType">
+			<xsd:length value="4"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- Common complex types -->
+	<xsd:complexType name="CoordType">
+		<xsd:attribute name="c" type="xyz_coordType" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="ColorType">
+		<xsd:attribute name="rgb" type="xyz_coordType" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="ValueType">
+		<xsd:attribute name="value" type="xsd:double" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="SkinWeightType">
+		<xsd:attribute name="w" type="doubleListType" use="required"/>
+		<xsd:attribute name="bi" type="intListType" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="NurbsCurveCVType">
+		<xsd:attribute name="c" type="doubleListType" use="required"/>
+		<xsd:attribute name="p" type="doubleListType" use="required"/>
+	</xsd:complexType>
+	<!-- Main parts -->
+	<xsd:complexType name="i3DType">
+		<xsd:sequence>
+			<xsd:element name="Asset" type="AssetType" minOccurs="0"/>
+			<xsd:element name="Files" type="FilesType" minOccurs="0"/>
+			<xsd:element name="Materials" type="MaterialsType" minOccurs="0"/>
+			<xsd:element name="Shapes" type="ShapesType" minOccurs="0"/>
+			<xsd:element name="Dynamics" type="DynamicsType" minOccurs="0"/>
+			<xsd:element name="Scene" type="SceneType" minOccurs="0"/>
+			<xsd:element name="Animation" type="AnimationType" minOccurs="0"/>
+			<xsd:element name="UserAttributes" type="UserAttributesType" minOccurs="0"/>
+		</xsd:sequence>
+		<xsd:attribute name="name" type="xsd:string"/>
+		<xsd:attribute name="version" type="xsd:string"/>
+	</xsd:complexType>
+	<!-- Asset -->
+	<xsd:complexType name="AssetType">
+		<xsd:sequence>
+			<xsd:element name="Export" type="ExportType" minOccurs="0"/>
+		</xsd:sequence>
+		<xsd:attribute name="filename" type="xsd:string"/>
+	</xsd:complexType>
+	<xsd:complexType name="ExportType">
+		<xsd:attribute name="date" type="xsd:string"/>
+		<xsd:attribute name="version" type="xsd:string"/>
+		<xsd:attribute name="program" type="xsd:string"/>
+	</xsd:complexType>
+	<!-- Files -->
+	<xsd:complexType name="FilesType">
+		<xsd:sequence>
+			<xsd:element name="File" minOccurs="0" maxOccurs="unbounded">
+				<xsd:complexType>
+					<xsd:attribute name="name" type="xsd:string" use="required"/>
+					<xsd:attribute name="filename" type="xsd:string" use="required"/>
+					<xsd:attribute name="relativePath" type="xsd:string"/>
+				</xsd:complexType>
+			</xsd:element>
+		</xsd:sequence>
+	</xsd:complexType>
+	<!-- Materials -->
+	<xsd:complexType name="MaterialsType">
+		<xsd:sequence>
+			<xsd:element name="Material" type="MaterialType" maxOccurs="unbounded"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="MaterialType">
+		<xsd:sequence>
+			<xsd:element name="Texture" type="TextureReferenceType" minOccurs="0"/>
+			<xsd:element name="Normalmap" type="TextureReferenceType" minOccurs="0"/>
+			<xsd:element name="Envmap" type="TextureReferenceType" minOccurs="0"/>
+			<xsd:element name="Glossmap" type="TextureReferenceType" minOccurs="0"/>
+		</xsd:sequence>
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+		<xsd:attribute name="diffuseColor" type="xyzw_coordType"/>
+		<xsd:attribute name="cosPower" type="xsd:double"/>
+		<xsd:attribute name="specularColor" type="xyz_coordType"/>
+		<xsd:attribute name="refraction" type="xsd:string"/>
+		<xsd:attribute name="refractiveIndex" type="xsd:double"/>
+		<xsd:attribute name="ambientColor" type="xyz_coordType"/>
+		<xsd:attribute name="alphaBlending" type="xsd:string"/>
+	</xsd:complexType>
+	<xsd:complexType name="TextureReferenceType">
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+	</xsd:complexType>
+	<!-- Shapes -->
+	<xsd:complexType name="ShapesType">
+		<xsd:choice maxOccurs="unbounded">
+			<xsd:element name="IndexedFaceSet" type="IndexedFaceSetType" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="NurbsCurve" type="NurbsCurveType" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:choice>
+	</xsd:complexType>
+	<xsd:complexType name="NurbsCurveType">
+		<xsd:sequence>
+			<xsd:element name="cv" type="NurbsCurveCVType" minOccurs="4" maxOccurs="unbounded"/>
+		</xsd:sequence>
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+		<xsd:attribute name="degree" type="xsd:integer" use="required"/>
+		<xsd:attribute name="form" type="xsd:string" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="IndexedFaceSetType">
+		<xsd:choice maxOccurs="unbounded">
+			<xsd:element name="Vertices" type="VerticesType"/>
+			<xsd:element name="SkinWeights" type="SkinWeightsType" minOccurs="0"/>
+			<xsd:element name="Faces" type="FacesType"/>
+		</xsd:choice>
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="VerticesType">
+		<xsd:sequence>
+			<xsd:element name="v" type="CoordType" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="SkinWeightsType">
+		<xsd:sequence>
+			<xsd:element name="cv" type="SkinWeightType" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="FacesType">
+		<xsd:sequence>
+			<xsd:element name="f" maxOccurs="unbounded">
+				<xsd:complexType>
+					<xsd:attribute name="vi" type="intListType" use="required"/>
+					<xsd:attribute name="t0" type="doubleListType"/>
+					<xsd:attribute name="t1" type="doubleListType"/>
+					<xsd:attribute name="t2" type="doubleListType"/>
+					<xsd:attribute name="t3" type="doubleListType"/>
+					<xsd:attribute name="n" type="doubleListType"/>
+					<xsd:attribute name="c" type="doubleListType"/>
+					<xsd:attribute name="ci" type="xsd:integer"/>
+				</xsd:complexType>
+			</xsd:element>
+		</xsd:sequence>
+		<xsd:attribute name="shaderlist" type="xsd:string"/>
+	</xsd:complexType>
+	<!-- Dynamics-->
+	<xsd:complexType name="DynamicsType">
+		<xsd:choice maxOccurs="unbounded">
+			<xsd:element name="ParticleSystem" type="ParticleSystemType" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:choice>
+	</xsd:complexType>
+	<xsd:complexType name="ParticleSystemType">
+		<xsd:choice maxOccurs="unbounded">
+			<xsd:element name="Gravity" type="GravityType" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="Air" type="AirType" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:choice>
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+		<xsd:attribute name="type" type="xsd:string" use="required"/>
+		<xsd:attribute name="rate" type="xsd:double" use="required"/>
+		<xsd:attribute name="lifespanInfinite" type="xsd:string" use="required"/>
+		<xsd:attribute name="speed" type="xsd:double" use="required"/>
+		<xsd:attribute name="speedRandom" type="xsd:double" use="required"/>
+		<xsd:attribute name="tangentSpeed" type="xsd:double" use="required"/>
+		<xsd:attribute name="normalSpeed" type="xsd:double" use="required"/>
+		<xsd:attribute name="lifespan" type="xsd:double" use="required"/>
+		<xsd:attribute name="maxCount" type="xsd:integer" use="required"/>
+		<xsd:attribute name="spriteScaleX" type="xsd:double" use="required"/>
+		<xsd:attribute name="spriteScaleY" type="xsd:double" use="required"/>
+		<xsd:attribute name="depthSort" type="xsd:string" use="required"/>
+		<xsd:attribute name="emitterShape" type="xsd:string" use="required"/>
+		<xsd:attribute name="material" type="xsd:string" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="GravityType">
+		<xsd:attribute name="force" type="xyz_coordType" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="AirType">
+		<xsd:attribute name="velocity" type="xyz_coordType" use="required"/>
+	</xsd:complexType>
+	<!-- Scene -->
+	<xsd:complexType name="SceneType">
+		<xsd:choice maxOccurs="unbounded">
+			<xsd:element name="TransformGroup" type="TransformGroupType" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="Light" type="LightType" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="Camera" type="CameraType" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="Shape" type="ShapeType" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="Dynamic" type="DynamicType" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="AudioSource" type="AudioSourceType" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:choice>
+	</xsd:complexType>
+	<xsd:complexType name="TransformGroupType">
+		<xsd:choice maxOccurs="unbounded">
+			<xsd:element name="TransformGroup" type="TransformGroupType" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="Light" type="LightType" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="Camera" type="CameraType" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="Shape" type="ShapeType" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="Dynamic" type="DynamicType" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="AudioSource" type="AudioSourceType" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:choice>
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+		<xsd:attribute name="translation" type="xyz_coordType"/>
+		<xsd:attribute name="rotation" type="xyz_coordType"/>
+		<xsd:attribute name="scale" type="xyz_coordType"/>
+		<xsd:attribute name="visibility" type="xsd:string"/>
+		<xsd:attribute name="oc" type="xsd:string"/>
+		<xsd:attribute name="static" type="xsd:string"/>
+		<xsd:attribute name="kinematic" type="xsd:string"/>
+		<xsd:attribute name="dynamic" type="xsd:string"/>
+		<xsd:attribute name="compound" type="xsd:string"/>
+		<xsd:attribute name="compoundChild" type="xsd:string"/>
+		<xsd:attribute name="collision" type="xsd:string"/>
+		<xsd:attribute name="ccd" type="xsd:string"/>
+		<xsd:attribute name="trigger" type="xsd:string"/>
+		<xsd:attribute name="cloth" type="xsd:string"/>
+		<xsd:attribute name="restitution" type="xsd:double"/>
+		<xsd:attribute name="staticFriction" type="xsd:double"/>
+		<xsd:attribute name="dynamicFriction" type="xsd:double"/>
+		<xsd:attribute name="skinWidth" type="xsd:double"/>
+		<xsd:attribute name="density" type="xsd:double"/>
+		<xsd:attribute name="collisionGroup" type="xsd:integer"/>
+		<xsd:attribute name="joint" type="xsd:string"/>
+		<xsd:attribute name="projection" type="xsd:string"/>
+		<xsd:attribute name="xAxisDrive" type="xsd:string"/>
+		<xsd:attribute name="yAxisDrive" type="xsd:string"/>
+		<xsd:attribute name="zAxisDrive" type="xsd:string"/>
+		<xsd:attribute name="drivePos" type="xsd:string"/>
+		<xsd:attribute name="projDistance" type="xsd:double"/>
+		<xsd:attribute name="driveForceLimit" type="xsd:double"/>
+		<xsd:attribute name="driveSpring" type="xsd:double"/>
+		<xsd:attribute name="driveDamping" type="xsd:double"/>
+		<xsd:attribute name="rotMinX" type="xsd:double"/>
+		<xsd:attribute name="rotMinY" type="xsd:double"/>
+		<xsd:attribute name="rotMinZ" type="xsd:double"/>
+		<xsd:attribute name="rotMaxX" type="xsd:double"/>
+		<xsd:attribute name="rotMaxY" type="xsd:double"/>
+		<xsd:attribute name="rotMaxZ" type="xsd:double"/>
+		<xsd:attribute name="transMinX" type="xsd:double"/>
+		<xsd:attribute name="transMinY" type="xsd:double"/>
+		<xsd:attribute name="transMinZ" type="xsd:double"/>
+		<xsd:attribute name="transMaxX" type="xsd:double"/>
+		<xsd:attribute name="transMaxY" type="xsd:double"/>
+		<xsd:attribute name="transMaxZ" type="xsd:double"/>
+	</xsd:complexType>
+	<xsd:complexType name="LightType">
+		<xsd:complexContent>
+			<xsd:extension base="TransformGroupType">
+				<xsd:attribute name="type" type="xsd:string"/>
+				<xsd:attribute name="diffuseColor" type="xyz_coordType"/>
+				<xsd:attribute name="emitDiffuse" type="xsd:string"/>
+				<xsd:attribute name="specularColor" type="xyz_coordType"/>
+				<xsd:attribute name="emitSpecular" type="xsd:string"/>
+				<xsd:attribute name="castShadowMap" type="xsd:string"/>
+				<xsd:attribute name="depthMapBias" type="xsd:double"/>
+				<xsd:attribute name="depthMapResolution" type="xsd:integer"/>
+				<xsd:attribute name="decayRate" type="xsd:integer"/>
+				<xsd:attribute name="range" type="xsd:double"/>
+				<xsd:attribute name="coneAngle" type="xsd:double"/>
+				<xsd:attribute name="dropOff" type="xsd:double"/>
+				<xsd:attribute name="projTexture" type="xsd:string"/>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="CameraType">
+		<xsd:complexContent>
+			<xsd:extension base="TransformGroupType">
+				<xsd:attribute name="fov" type="xsd:double"/>
+				<xsd:attribute name="nearClip" type="xsd:double"/>
+				<xsd:attribute name="farClip" type="xsd:double"/>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="ShapeType">
+		<xsd:complexContent>
+			<xsd:extension base="TransformGroupType">
+				<xsd:attribute name="ref" type="xsd:string" use="required"/>
+				<xsd:attribute name="castsShadows" type="xsd:string"/>
+				<xsd:attribute name="receiveShadows" type="xsd:string"/>
+				<xsd:attribute name="skinBindNodes" type="xsd:string"/>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="DynamicType">
+		<xsd:complexContent>
+			<xsd:extension base="TransformGroupType">
+				<xsd:attribute name="ref" type="xsd:string" use="required"/>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:complexType name="AudioSourceType">
+		<xsd:complexContent>
+			<xsd:extension base="TransformGroupType">
+				<xsd:attribute name="file" type="xsd:string" use="required"/>
+				<xsd:attribute name="range" type="xsd:double"/>
+				<xsd:attribute name="volume" type="xsd:double"/>
+				<xsd:attribute name="loops" type="xsd:integer"/>
+				<xsd:attribute name="streamed" type="xsd:string"/>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<!-- Animation -->
+	<xsd:complexType name="AnimationType">
+		<xsd:sequence>
+			<xsd:element name="CharacterSets" type="CharacterSetsType" minOccurs="0"/>
+			<xsd:element name="MorphTargets" type="MorphTargetsType" minOccurs="0"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="CharacterSetsType">
+		<xsd:sequence>
+			<xsd:element name="CharacterSet" type="CharacterSetType" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="CharacterSetType">
+		<xsd:sequence>
+			<xsd:element name="Clip" type="ClipType" maxOccurs="unbounded"/>
+		</xsd:sequence>
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="ClipType">
+		<xsd:sequence>
+			<xsd:element name="Keyframes" type="KeyframesType" maxOccurs="unbounded"/>
+		</xsd:sequence>
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+		<xsd:attribute name="duration" type="xsd:double" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="KeyframesType">
+		<xsd:sequence>
+			<xsd:element name="Keyframe" type="KeyframeType" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:sequence>
+		<xsd:attribute name="node" type="xsd:string" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="KeyframeType">
+		<xsd:attribute name="time" type="xsd:double"/>
+		<xsd:attribute name="translation" type="xyz_coordType"/>
+		<xsd:attribute name="rotation" type="xyz_coordType"/>
+		<xsd:attribute name="scale" type="xyz_coordType"/>
+		<xsd:attribute name="visibility" type="xsd:boolean"/>
+		<xsd:attribute name="iprin" type="xsd:string"/>
+		<xsd:attribute name="iprout" type="xsd:string"/>
+	</xsd:complexType>
+	<xsd:complexType name="MorphTargetsType">
+		<xsd:sequence>
+			<xsd:element name="Shape" type="MorphTargetShapeType" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:sequence>
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="MorphTargetShapeType">
+		<xsd:sequence>
+			<xsd:element name="Pose" type="PoseType" maxOccurs="unbounded"/>
+		</xsd:sequence>
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="PoseType">
+		<xsd:sequence>
+			<xsd:element name="cv" type="CoordType" maxOccurs="unbounded"/>
+		</xsd:sequence>
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+	</xsd:complexType>
+	<!-- UserAttributes -->
+	<xsd:complexType name="UserAttributesType">
+		<xsd:sequence>
+			<xsd:element name="UserAttribute" type="UserAttributeType" minOccurs="0"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<xsd:complexType name="UserAttributeType">
+		<xsd:sequence>
+			<xsd:element name="Attribute" type="AttributeType" maxOccurs="unbounded"/>
+		</xsd:sequence>
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+	</xsd:complexType>
+	<xsd:complexType name="AttributeType">
+		<xsd:attribute name="name" type="xsd:string" use="required"/>
+		<xsd:attribute name="type" type="xsd:string" use="required"/>
+		<xsd:attribute name="value" type="xsd:string" use="required"/>
+	</xsd:complexType>
+</xsd:schema>
