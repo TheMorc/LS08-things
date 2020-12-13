@@ -119,7 +119,7 @@ a:hover {
 	margin-right:2px;
 	}
 #menu li a:hover {
-	background:url(bg-menu-hover.png) no-repeat center center;
+	background:url(bg-menu-hover.png) no-repeat center !important;
 	}
 
 /* Sidebar */
