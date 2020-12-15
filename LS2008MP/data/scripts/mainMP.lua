@@ -3,7 +3,7 @@
 -- beware!, this is an incredible spaghetti code and although it works somehow i just don't recommend even trying to touch it
 -- because it may break out of sudden and not a single person will ever fix it. 
 -- @author  Richard Gráčik (mailto:r.gracik@gmail.com)
--- @date  10.11.2020 - 13.12.2020
+-- @date  10.11.2020 - 15.12.2020
 
 MPloaded = false
 MPversion = "0.11 luasockets"
@@ -96,6 +96,8 @@ function init()
 	OnInGameMenuMenu = MPOnInGameMenuMenu
 	InGameMenu.render = MPInGameMenuRender
 	BaseMission.loadVehicle = MPloadVehicle
+	GameMenuSystem.inGameMenuMode = MPinGameMenuMode
+	GameMenuSystem.playMode = MPplayMode
 		
 	print("[LS2008MP] main.lua injector - finished")
 		
@@ -204,6 +206,7 @@ function MPopenServerMenu()
 	print("[LS2008MP] server")
 	MPstate = "Server"
 	MPHeartbeat = MPServerHeartbeat
+	MPSend = MPServerSend
 	gameMenuSystem.serverMenu:reset();
     gameMenuSystem.currentMenu = gameMenuSystem.serverMenu;
 end;
@@ -211,6 +214,7 @@ function MPopenClientMenu()
 	print("[LS2008MP] client")
 	MPstate = "Client"
 	MPHeartbeat = MPClientHeartbeat
+	MPSend = MPClientSend
 	--MPsettingsMenuxPos = 1-0.03-0.02-0.02-0.15*3
 	gameMenuSystem.MPsettingsMenu:reset();
 	
@@ -233,6 +237,7 @@ end;
 function MPsettingsMenuSave()
 	print("[LS2008MP] settings menu save settings")
 	modifyMPSettings(MPplayerName, MPip, MPport)
+	MPsettingsMenuSelected = ""
 end
 function MPsettingsMenuSelectName()
 	MPsettingsMenuSelected = "name"
@@ -244,14 +249,8 @@ function MPsettingsMenuSelectPort()
 	MPsettingsMenuSelected = "port"
 end
 function MPOnInGameMenuMenu()
-	if MPstate == "Client" then
-		MPudp:send("logoff;"..MPplayerName)
-	else
-		handleUDPmessage("logoff;"..MPplayerName, MPip, MPport)
-	end
-	
-	--original.OnInGameMenuMenu()
-	restartApplication()
+	MPSend("logoff;"..MPplayerName)
+	restartApplication() --restarting the game because it's just pointless to go back to the menu
 end
 function MPclientMenuConnect()
 	if string.len(MPplayerName) == 0 then
@@ -275,6 +274,7 @@ function MPclientMenuConnect()
 	gameMenuSystem.MPsettingsMenu.items[6] = Overlay:new("GUIMPsettingsBackground", "data/missions/hud_mission_base.png", MPsettingsMenuxPos, 0.02, 0.15, 0.06)
 	MPinitSrvCli = false
 	MPenabled = true
+	MPsettingsMenuSelected = "" 
 	
 	MPclientsavegame = gameMenuSystem.serverMenu.savegames[6];
 
@@ -284,8 +284,8 @@ function MPclientMenuConnect()
 
 	MPClientHeartbeat()
 	
-	MPupdateStart = os.time()
-	MPupdateEnd = MPupdateStart+60
+	--MPupdateStart = os.time()
+	--MPupdateEnd = MPupdateStart+60
 	
 end;
 function MPclientMenuConnContinue()
@@ -328,11 +328,7 @@ function MPonEnterVehicle(self, vehicle)
     	g_currentMission.currentVehicle = g_currentMission.controlledVehicle;
 		for i=1, table.getn(g_currentMission.vehicles) do
     	    if g_currentMission.vehicles[i] == g_currentMission.currentVehicle then
-    	    	if MPstate == "Client" then
-					MPudp:send("bc1;enteredVehicle;"..MPplayerName..";"..i)
-				else
-					handleUDPmessage("bc1;enteredVehicle;"..MPplayerName..";"..i, MPip, MPport)
-				end
+    	    	MPSend("bc1;enteredVehicle;"..MPplayerName..";"..i)
    			end
     	end
     end
@@ -348,11 +344,7 @@ function MPonLeaveVehicle()
     g_currentMission.currentVehicle = nil;
     for i=1, table.getn(g_currentMission.vehicles) do
         if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        	if MPstate == "Client" then
-				MPudp:send("bc1;leftVehicle;"..MPplayerName..";"..i)
-			else
-				handleUDPmessage("bc1;leftVehicle;"..MPplayerName..";"..i, MPip, MPport)
-			end
+        	MPSend("bc1;leftVehicle;"..MPplayerName..";"..i)
         end
     end
 end
@@ -454,26 +446,17 @@ function MPtoggleVehicle(self)
 end
 
 function MPsyncAttachImplement(vehicle, object, index)
-	
 	original.attachImplement(vehicle, object, index)
 	
 	for i=1, #g_currentMission.attachables do
       	if g_currentMission.attachables[i] == object then
-    		if MPstate == "Client" then
-				MPudp:send("bc1;attachImplement;"..MPplayerName..";"..i..";"..index)
-			else
-				handleUDPmessage("bc1;attachImplement;"..MPplayerName..";"..i..";"..index, MPip, MPport)
-			end
+    		MPSend("bc1;attachImplement;"..MPplayerName..";"..i..";"..index)
         end 	
     end
 end
 function MPsyncDetachImplement(self, index)
-	if MPstate == "Client" then
-		MPudp:send("bc1;detachImplement;"..MPplayerName..";"..index)
-	else
-		handleUDPmessage("bc1;detachImplement;"..MPplayerName..";"..index, MPip, MPport)
-	end 	
-	
+	MPSend("bc1;detachImplement;"..MPplayerName..";"..index)
+
 	original.detachImplement(self, index)
 end
 function MPsyncAttachTrailer(self, trailer)
@@ -481,20 +464,12 @@ function MPsyncAttachTrailer(self, trailer)
 	
 	for i=1, #g_currentMission.trailers do
       	if g_currentMission.trailers[i] == trailer then
-    		if MPstate == "Client" then
-				MPudp:send("bc1;attachTrailer;"..MPplayerName..";"..i)
-			else
-				handleUDPmessage("bc1;attachTrailer;"..MPplayerName..";"..i, MPip, MPport)
-			end
+    		MPSend("bc1;attachTrailer;"..MPplayerName..";"..i)
         end 	
     end
 end
 function MPsyncDetachTrailer(self)
-	if MPstate == "Client" then
-		MPudp:send("bc1;detachTrailer;"..MPplayerName)
-	else
-		handleUDPmessage("bc1;detachTrailer;"..MPplayerName, MPip, MPport)
-	end 	
+	MPSend("bc1;detachTrailer;"..MPplayerName)	
 	
 	return original.handleDetachTrailerEvent(self)
 end
@@ -502,28 +477,18 @@ function MPsyncAttachCutter(self, cutter)
 	original.attachCutter(self, cutter)
 	for i=1, #g_currentMission.cutters do
       	if g_currentMission.cutters[i] == cutter then
-    		if MPstate == "Client" then
-				MPudp:send("bc1;attachCutter;"..MPplayerName..";"..i)
-			else
-				handleUDPmessage("bc1;attachCutter;"..MPplayerName..";"..i, MPip, MPport)
-			end
+    		MPSend("bc1;attachCutter;"..MPplayerName..";"..i)
         end 	
     end
 end
 function MPsyncDetachCurrentCutter(self)
-	if MPstate == "Client" then
-		MPudp:send("bc1;detachCurrentCutter;"..MPplayerName)
-	else
-		handleUDPmessage("bc1;detachCurrentCutter;"..MPplayerName, MPip, MPport)
-	end 	
+	MPSend("bc1;detachCurrentCutter;"..MPplayerName)	
 	
 	original.detachCurrentCutter(self)
 end
 function MPvehicleUpdate(self, dt, isActive)
-	if not gameMenuSystem:isMenuActive() then
-		original.vehicleUpdate(self, dt, isActive)
-	end
-		
+	MPvehicleOriginalUpdate(self, dt, isActive)
+			
 	if self.MPsitting then --update that is executed if someone's sitting in a vehicle
 		--attached things update
 		for i=1, table.getn(self.attachedImplements) do
@@ -531,10 +496,10 @@ function MPvehicleUpdate(self, dt, isActive)
     	end;
         
     	--lights
-		for i=1, self.numLights do
-			local light = self.lights[i];
-			setVisibility(light, self.lightsActive);
-		end
+		--for i=1, self.numLights do
+		--	local light = self.lights[i];
+		--	setVisibility(light, self.lightsActive);
+		--end
 		
 		if self.MPinputEvent == "lower" then
 			self.MPinputEvent = ""
@@ -640,33 +605,21 @@ function MPvehicleUpdate(self, dt, isActive)
         				LIjointDesc = self.attacherJoints[LIimplement.jointDescIndex];
         				for i=1, table.getn(g_currentMission.vehicles) do
         					if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        						if MPstate == "Client" then
-									MPudp:send("bc1;vehEvent;lower;"..MPplayerName..";"..i..";"..tostring(LIjointDesc.moveDown))
-								else
-									handleUDPmessage("bc1;vehEvent;lower;"..MPplayerName..";"..i..";"..tostring(LIjointDesc.moveDown), MPip, MPport)
-								end
+        						MPSend("bc1;vehEvent;lower;"..MPplayerName..";"..i..";"..tostring(LIjointDesc.moveDown))
 							end
 						end
     				end;
         		elseif InputBinding.hasEvent(InputBinding.TOGGLE_LIGHTS) then
         	    	for i=1, table.getn(g_currentMission.vehicles) do
         				if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        					if MPstate == "Client" then
-								MPudp:send("bc1;vehEvent;lights;"..MPplayerName..";"..i..";"..tostring(self.lightsActive))
-							else
-								handleUDPmessage("bc1;vehEvent;lights;"..MPplayerName..";"..i..";"..tostring(self.lightsActive), MPip, MPport)
-							end
+        					MPSend("bc1;vehEvent;lights;"..MPplayerName..";"..i..";"..tostring(self.lightsActive))
 						end
 					end
 				elseif InputBinding.hasEvent(InputBinding.SWITCH_IMPLEMENT) then
 					for i=1, table.getn(g_currentMission.vehicles) do
         				if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
         					if table.getn(self.attachedImplements) > 0 then
-        						if MPstate == "Client" then
-									MPudp:send("bc1;vehEvent;switchImplement;"..MPplayerName..";"..i..";"..tostring(self.selectedImplement))
-								else
-									handleUDPmessage("bc1;vehEvent;switchImplement;"..MPplayerName..";"..i..";"..tostring(self.selectedImplement), MPip, MPport)
-								end
+        						MPSend("bc1;vehEvent;switchImplement;"..MPplayerName..";"..i..";"..tostring(self.selectedImplement))
 							end
 						end
 					end
@@ -815,11 +768,7 @@ function MPcombineUpdate(self, dt, isActive)
            	for i=1, table.getn(g_currentMission.vehicles) do
        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
        				if self.attachedCutter ~= nil then
-       					if MPstate == "Client" then
-							MPudp:send("bc1;vehEvent;lowerCutter;"..MPplayerName..";"..i..";"..tostring(self.cutterAttacherJointMoveDown))
-						else
-							handleUDPmessage("bc1;vehEvent;lowerCutter;"..MPplayerName..";"..i..";"..tostring(self.cutterAttacherJointMoveDown), MPip, MPport)
-						end
+       					MPSend("bc1;vehEvent;lowerCutter;"..MPplayerName..";"..i..";"..tostring(self.cutterAttacherJointMoveDown))
 					end
 				end
 			end
@@ -827,22 +776,14 @@ function MPcombineUpdate(self, dt, isActive)
           	for i=1, table.getn(g_currentMission.vehicles) do
         		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
         			if self.attachedCutter ~= nil then
-        				if MPstate == "Client" then
-							MPudp:send("bc1;vehEvent;threshing;"..MPplayerName..";"..i..";"..tostring(self.attachedCutter:isReelStarted()))
-						else
-							handleUDPmessage("bc1;vehEvent;threshing;"..MPplayerName..";"..i..";"..tostring(self.attachedCutter:isReelStarted()), MPip, MPport)
-						end
+        				MPSend("bc1;vehEvent;threshing;"..MPplayerName..";"..i..";"..tostring(self.attachedCutter:isReelStarted()))
 					end
 				end
 			end
         elseif InputBinding.hasEvent(InputBinding.EMPTY_GRAIN) then
         	for i=1, table.getn(g_currentMission.vehicles) do
         		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;pipe;"..MPplayerName..";"..i..";"..tostring(self.pipeOpening))
-					else
-						handleUDPmessage("bc1;vehEvent;pipe;"..MPplayerName..";"..i..";"..tostring(self.pipeOpening), MPip, MPport)
-					end
+        			MPSend("bc1;vehEvent;pipe;"..MPplayerName..";"..i..";"..tostring(self.pipeOpening))
 				end
 			end
 		end
@@ -863,11 +804,7 @@ function MPploughUpdate(self, dt)
 	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
     	for i=1, #g_currentMission.attachables do
       		if g_currentMission.attachables[i] == self then
-    			if MPstate == "Client" then
-					MPudp:send("bc1;ploughRot;"..MPplayerName..";"..i..";"..tostring(self.rotationMax))
-				else
-					handleUDPmessage("bc1;ploughRot;"..MPplayerName..";"..i..";"..tostring(self.rotationMax), MPip, MPport)
-				end
+    			MPSend("bc1;ploughRot;"..MPplayerName..";"..i..";"..tostring(self.rotationMax))
 			end
 		end
     end;
@@ -878,11 +815,7 @@ function MPsprayerUpdate(self, dt)
 	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
     	for i=1, #g_currentMission.attachables do
       		if g_currentMission.attachables[i] == self then
-    			if MPstate == "Client" then
-					MPudp:send("bc1;sprayerActive;"..MPplayerName..";"..i..";"..tostring(self.isActive))
-				else
-					handleUDPmessage("bc1;sprayerActive;"..MPplayerName..";"..i..";"..tostring(self.isActive), MPip, MPport)
-				end
+    			MPSend("bc1;sprayerActive;"..MPplayerName..";"..i..";"..tostring(self.isActive))
 			end
 		end
     end;
@@ -893,11 +826,7 @@ function MPmowerUpdate(self, dt)
 	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
     	for i=1, #g_currentMission.attachables do
       		if g_currentMission.attachables[i] == self then
-    			if MPstate == "Client" then
-					MPudp:send("bc1;mowerActive;"..MPplayerName..";"..i..";"..tostring(self.isActive))
-				else
-					handleUDPmessage("bc1;mowerActive;"..MPplayerName..";"..i..";"..tostring(self.isActive), MPip, MPport)
-				end
+    			MPSend("bc1;mowerActive;"..MPplayerName..";"..i..";"..tostring(self.isActive))
 			end
 		end
     end;
@@ -909,11 +838,7 @@ function MPtrailerAttachTrailer(self, trailer)
 	for i=1, #g_currentMission.trailers do
 		for j=1, #g_currentMission.trailers do
       		if g_currentMission.trailers[i] == trailer and g_currentMission.trailers[j] == self then
-    			if MPstate == "Client" then
-					MPudp:send("bc1;trailerAttachTrailer;"..j..";"..i)
-				else
-					handleUDPmessage("bc1;trailerAttachTrailer;"..j..";"..i, MPip, MPport)
-				end
+    			MPSend("bc1;trailerAttachTrailer;"..j..";"..i)
         	end 	
         end
     end
@@ -922,11 +847,7 @@ function MPtoggleTipState(self)
 	original.toggleTipState(self)
     for i=1, #g_currentMission.trailers do
       	if g_currentMission.trailers[i] == self then
-    		if MPstate == "Client" then
-				MPudp:send("bc1;toggleTipState;"..MPplayerName..";"..i)
-			else
-				handleUDPmessage("bc1;toggleTipState;"..MPplayerName..";"..i, MPip, MPport)
-			end
+    		MPSend("bc1;toggleTipState;"..MPplayerName..";"..i)
 		end
 	end
 end
@@ -938,11 +859,7 @@ end
 function MPtrailerhandleDetachTrailerEvent(self)
 	for i=1, #g_currentMission.trailers do
       	if g_currentMission.trailers[i] == self then
-    		if MPstate == "Client" then
-				MPudp:send("bc1;trailerDetachTrailer;"..i)
-			else
-				handleUDPmessage("bc1;trailerDetachTrailer;"..i, MPip, MPport)
-			end
+    		MPSend("bc1;trailerDetachTrailer;"..i)
         end 
     end
     
@@ -970,11 +887,7 @@ function MPLexion400APkeyEvent(self, unicode, sym, modifier, isDown)
     	if isDown and sym == Input.KEY_o then
 			for i=1, table.getn(g_currentMission.vehicles) do
         		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;frontduals;"..MPplayerName..";"..i..";"..tostring(self.frontduals))
-					else
-						handleUDPmessage("bc1;vehEvent;frontduals;"..MPplayerName..";"..i..";"..tostring(self.frontduals), MPip, MPport)
-					end
+        			MPSend("bc1;vehEvent;frontduals;"..MPplayerName..";"..i..";"..tostring(self.frontduals))
 				end
 			end
 		end; 
@@ -1067,47 +980,33 @@ end
 function MPCombine2keyEvent(self, unicode, sym, modifier, isDown)
 	original.Combine2keyEvent(self, unicode, sym, modifier, isDown)
 	if self.isEntered then
-		if isDown and sym==self.keys.stroh then
-			for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;hayOn;"..MPplayerName..";"..i..";"..tostring(self.hayOn))
-					else
-						handleUDPmessage("bc1;vehEvent;hayOn;"..MPplayerName..";"..i..";"..tostring(self.hayOn), MPip, MPport)
+		if isDown then
+			if sym==self.keys.stroh then
+				for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;hayOn;"..MPplayerName..";"..i..";"..tostring(self.hayOn))
 					end
 				end
-			end
-		elseif isDown and sym==self.keys.pipe then
-			for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;fPipeOpen;"..MPplayerName..";"..i..";"..tostring(self.fPipeOpen))
-					else
-						handleUDPmessage("bc1;vehEvent;fPipeOpen;"..MPplayerName..";"..i..";"..tostring(self.fPipeOpen), MPip, MPport)
+			elseif sym==self.keys.pipe then
+				for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;fPipeOpen;"..MPplayerName..";"..i..";"..tostring(self.fPipeOpen))
 					end
 				end
-			end
-		end;
+			end;
+		end
     end          
 end
 function MPCombine2attachCutter(self, cutter)
 	original.Combine2attachCutter(self, cutter)
 	for i=1, #g_currentMission.cutters do
       	if g_currentMission.cutters[i] == cutter then
-    		if MPstate == "Client" then
-				MPudp:send("bc1;attachCutter;"..MPplayerName..";"..i)
-			else
-				handleUDPmessage("bc1;attachCutter;"..MPplayerName..";"..i, MPip, MPport)
-			end
+    		MPSend("bc1;attachCutter;"..MPplayerName..";"..i)
         end 	
     end
 end
 function MPCombine2detachCurrentCutter(self)
-	if MPstate == "Client" then
-		MPudp:send("bc1;detachCurrentCutter;"..MPplayerName)
-	else
-		handleUDPmessage("bc1;detachCurrentCutter;"..MPplayerName, MPip, MPport)
-	end 	
+	MPSend("bc1;detachCurrentCutter;"..MPplayerName)	
 	
 	original.Combine2detachCurrentCutter(self)
 end
@@ -1217,11 +1116,7 @@ function MPCombine2Update(self, dt, isActive)
            	for i=1, table.getn(g_currentMission.vehicles) do
        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
        				if self.attachedCutter ~= nil then
-       					if MPstate == "Client" then
-							MPudp:send("bc1;vehEvent;lowerCutter;"..MPplayerName..";"..i..";"..tostring(self.cutterAttacherJointMoveDown))
-						else
-							handleUDPmessage("bc1;vehEvent;lowerCutter;"..MPplayerName..";"..i..";"..tostring(self.cutterAttacherJointMoveDown), MPip, MPport)
-						end
+       					MPSend("bc1;vehEvent;lowerCutter;"..MPplayerName..";"..i..";"..tostring(self.cutterAttacherJointMoveDown))
 					end
 				end
 			end
@@ -1229,22 +1124,14 @@ function MPCombine2Update(self, dt, isActive)
           	for i=1, table.getn(g_currentMission.vehicles) do
         		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
         			if self.attachedCutter ~= nil then
-        				if MPstate == "Client" then
-							MPudp:send("bc1;vehEvent;threshing;"..MPplayerName..";"..i..";"..tostring(self.attachedCutter:isReelStarted()))
-						else
-							handleUDPmessage("bc1;vehEvent;threshing;"..MPplayerName..";"..i..";"..tostring(self.attachedCutter:isReelStarted()), MPip, MPport)
-						end
+						MPSend("bc1;vehEvent;threshing;"..MPplayerName..";"..i..";"..tostring(self.attachedCutter:isReelStarted()))
 					end
 				end
 			end
         elseif InputBinding.hasEvent(InputBinding.EMPTY_GRAIN) then
         	for i=1, table.getn(g_currentMission.vehicles) do
         		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;pipe;"..MPplayerName..";"..i..";"..tostring(self.pipeOpening))
-					else
-						handleUDPmessage("bc1;vehEvent;pipe;"..MPplayerName..";"..i..";"..tostring(self.pipeOpening), MPip, MPport)
-					end
+        			MPSend("bc1;vehEvent;pipe;"..MPplayerName..";"..i..";"..tostring(self.pipeOpening))
 				end
 			end
 		end
@@ -1257,11 +1144,7 @@ function MPPloughWithDrumUpdate(self, dt)
 	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
     	for i=1, #g_currentMission.attachables do
       		if g_currentMission.attachables[i] == self then
-    			if MPstate == "Client" then
-					MPudp:send("bc1;ploughRot;"..MPplayerName..";"..i..";"..tostring(self.rotationMax))
-				else
-					handleUDPmessage("bc1;ploughRot;"..MPplayerName..";"..i..";"..tostring(self.rotationMax), MPip, MPport)
-				end
+    			MPSend("bc1;ploughRot;"..MPplayerName..";"..i..";"..tostring(self.rotationMax))
 			end
 		end
     end
@@ -1377,65 +1260,47 @@ function MPareskeyEvent(self, unicode, sym, modifier, isDown)
 	original.areskeyEvent(self, unicode, sym, modifier, isDown)
 	
 	if self.isEntered then
-    	if isDown and sym == Input.KEY_9 then
-			for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
-					else
-						handleUDPmessage("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow), MPip, MPport)
+    	if isDown then
+    		if sym == Input.KEY_9 then
+				for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
 					end
 				end
-			end
-		end; 
+			end; 
 
-     	if isDown and sym == Input.KEY_p then 
-			for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
-					else
-						handleUDPmessage("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte), MPip, MPport)
+     		if sym == Input.KEY_p then 
+				for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
 					end
 				end
-			end
-		end;
+			end;
           
-		if isDown and sym == Input.KEY_6 then
-    	    for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;twinWheels;"..MPplayerName..";"..i..";"..tostring(self.twinWheelsActive))
-					else
-						handleUDPmessage("bc1;vehEvent;twinWheels;"..MPplayerName..";"..i..";"..tostring(self.twinWheelsActive), MPip, MPport)
+			if sym == Input.KEY_6 then
+    		    for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;twinWheels;"..MPplayerName..";"..i..";"..tostring(self.twinWheelsActive))
 					end
 				end
-			end
-		end;
+			end;
 		
-		if isDown and sym == Input.KEY_7 then
-    	    for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;bigWheels;"..MPplayerName..";"..i..";"..tostring(self.bigWheelsActive))
-					else
-						handleUDPmessage("bc1;vehEvent;bigWheels;"..MPplayerName..";"..i..";"..tostring(self.bigWheelsActive), MPip, MPport)
+			if sym == Input.KEY_7 then
+    		    for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;bigWheels;"..MPplayerName..";"..i..";"..tostring(self.bigWheelsActive))
 					end
 				end
-			end
-		end;
+			end;
 
-   		 if isDown and sym == Input.KEY_8 then
-    	    for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
-					else
-						handleUDPmessage("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive), MPip, MPport)
+   			 if sym == Input.KEY_8 then
+    		    for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+						MPSend("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
 					end
 				end
-			end
-		end;
+			end;
+		end
 	end
 end
 
@@ -1496,49 +1361,35 @@ function MPrenaultkeyEvent(self, unicode, sym, modifier, isDown)
 	original.renaultkeyEvent(self, unicode, sym, modifier, isDown)
 	
 	if self.isEntered then
-    	if isDown and sym == Input.KEY_7 then 
-			for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
-					else
-						handleUDPmessage("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow), MPip, MPport)
+    	if isDown then
+    		if sym == Input.KEY_7 then 
+				for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
 					end
 				end
-			end
-		end; 
+			end; 
 
-     	if isDown and sym == Input.KEY_p then 
-			for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
-					else
-						handleUDPmessage("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte), MPip, MPport)
+     		if sym == Input.KEY_p then 
+				for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+						MPSend("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
 					end
 				end
-			end
-		end;
+			end;
 		
-		if isDown and sym == Input.KEY_o then 
-			for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;porte1;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte1))
-					else
-						handleUDPmessage("bc1;vehEvent;porte1;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte1), MPip, MPport)
+			if sym == Input.KEY_o then 
+				for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;porte1;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte1))
 					end
 				end
-			end
-		end; 
+			end; 
 		
-   		if isDown and sym == Input.KEY_6 then
-    	    for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
-					else
-						handleUDPmessage("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive), MPip, MPport)
+   			if sym == Input.KEY_6 then
+    		    for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
 					end
 				end
 			end
@@ -1564,13 +1415,6 @@ function MPcaseUpdate(self, dt)
             else
             	self.rotationMaxporte = false
             end
-		--[[elseif self.MPinputEvent == "travails" then
-			self.MPinputEvent = ""
-            if self.MPeventState == "true" then
-            	self.travailsActive = true;
-            else
-            	self.travailsActive = false
-            end]]
 		elseif self.MPinputEvent == "bigWheels" then
 			self.MPinputEvent = ""
             if self.MPeventState == "true" then
@@ -1598,19 +1442,6 @@ function MPcaseUpdate(self, dt)
     	    	self.smallWheelsActive = true;
             end
 		end	
-
-		--[[if self.travailsActive then
-		   for i=1, self.numtravails do
-			local travail = self.travails[i];
-			setVisibility(travail, self.travailsActive);
-		   end;
-	       else
-		   for i=1, self.numtravails do
-			local travail = self.travails[i];
-			setVisibility(travail, self.travailsActive, false);
-		end;
-	    end;]]
-		
 				
 		if self.smallWheelsActive then
 			for i=1, self.numSmallWheels do
@@ -1651,66 +1482,35 @@ function MPcasekeyEvent(self, unicode, sym, modifier, isDown)
 	original.casekeyEvent(self, unicode, sym, modifier, isDown)
 	
 	if self.isEntered then
-    	if isDown and sym == Input.KEY_9 then
-			for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
-					else
-						handleUDPmessage("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow), MPip, MPport)
+    	if isDown then
+    		if sym == Input.KEY_9 then
+				for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
 					end
 				end
-			end
-		end; 
+			end; 
 
-     	if isDown and sym == Input.KEY_p then 
-			for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
-					else
-						handleUDPmessage("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte), MPip, MPport)
+     		if sym == Input.KEY_p then 
+				for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
 					end
 				end
-			end
-		end; 
+			end; 
 
-   	 	--if isDown and sym == Input.KEY_5 then
-		--	self.worklightsActive = not self.worklightsActive; not for now because you know, it crashes the game 
-		--end;
-     
-    	--[[if isDown and sym == Input.KEY_4 then
-			for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;travails;"..MPplayerName..";"..i..";"..tostring(self.travailsActive))
-					else
-						handleUDPmessage("bc1;vehEvent;travails;"..MPplayerName..";"..i..";"..tostring(self.travailsActive), MPip, MPport)
+			if sym == Input.KEY_7 then
+    	 	   for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;bigWheels;"..MPplayerName..";"..i..";"..tostring(self.bigWheelsActive))
 					end
 				end
-			end
-		end;]]--lights, disabled
+			end;
 
-          
-		if isDown and sym == Input.KEY_7 then
-    	    for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;bigWheels;"..MPplayerName..";"..i..";"..tostring(self.bigWheelsActive))
-					else
-						handleUDPmessage("bc1;vehEvent;bigWheels;"..MPplayerName..";"..i..";"..tostring(self.bigWheelsActive), MPip, MPport)
-					end
-				end
-			end
-		end;
-
-   		 if isDown and sym == Input.KEY_8 then
-    	    for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
-					else
-						handleUDPmessage("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive), MPip, MPport)
+   		 	if sym == Input.KEY_8 then
+    	    	for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
 					end
 				end
 			end
@@ -1815,53 +1615,39 @@ function MPNhkeyEvent(self, unicode, sym, modifier, isDown)
 	original.NhkeyEvent(self, unicode, sym, modifier, isDown)
 	
 	if self.isEntered then
-    	if isDown and sym == Input.KEY_9 then
-			for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
-					else
-						handleUDPmessage("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow), MPip, MPport)
+    	if isDown then
+    		if sym == Input.KEY_9 then
+				for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
 					end
 				end
-			end
-		end; 
+			end; 
 
-     	if isDown and sym == Input.KEY_p then 
-			for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
-					else
-						handleUDPmessage("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte), MPip, MPport)
+     		if sym == Input.KEY_p then 
+				for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
 					end
 				end
-			end
-		end; 
+			end; 
 
-		if isDown and sym == Input.KEY_8 then
-    	    for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
-					else
-						handleUDPmessage("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive), MPip, MPport)
+			if sym == Input.KEY_8 then
+    		    for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+       	 				MPSend("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
 					end
-				end
+				end;
 			end
-		end;
 
-   		 if isDown and sym == Input.KEY_6 then
-    	    for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;twinWheels;"..MPplayerName..";"..i..";"..tostring(self.twinWheelsActive))
-					else
-						handleUDPmessage("bc1;vehEvent;twinWheels;"..MPplayerName..";"..i..";"..tostring(self.twinWheelsActive), MPip, MPport)
+   		 	if sym == Input.KEY_6 then
+    		    for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;twinWheels;"..MPplayerName..";"..i..";"..tostring(self.twinWheelsActive))
 					end
 				end
-			end
-		end;
+			end;
+		end
 	end
 end
 
@@ -1889,11 +1675,7 @@ function MPTedderUpdate(self, dt)
 	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
 		for i=1, #g_currentMission.attachables do
      		if g_currentMission.attachables[i] == self then
-       			if MPstate == "Client" then
-					MPudp:send("bc1;impEvent;haying;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxRight))
-				else
-					handleUDPmessage("bc1;impEvent;haying;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxRight), MPip, MPport)
-				end
+       			MPSend("bc1;impEvent;haying;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxRight))
 			end
 		end
 	end;
@@ -1904,18 +1686,14 @@ function MPTedderkeyEvent(self, unicode, sym, modifier, isDown)
     if isDown and sym == Input.KEY_n then
 		for i=1, #g_currentMission.attachables do
      			if g_currentMission.attachables[i] == self then
-       			if MPstate == "Client" then
-					MPudp:send("bc1;impEvent;rotation;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxRight))
-				else
-					handleUDPmessage("bc1;impEvent;rotation;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxRight), MPip, MPport)
-				end
+       			MPSend("bc1;impEvent;rotation;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxRight))
 			end
 		end
 	end
 end
 
 function MPCougarUpdate(self, dt)
-	original.CougarUpdate(self, dt)
+	MPCougarOriginalUpdate(self, dt)
 	
 	if self.MPsitting then
 		if self.MPinputEvent == "transport" then
@@ -2254,11 +2032,7 @@ function MPCougarUpdate(self, dt)
 			if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
 				for i=1, table.getn(g_currentMission.vehicles) do
         			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				if MPstate == "Client" then
-							MPudp:send("bc1;vehEvent;activeMower;"..MPplayerName..";"..i..";"..tostring(self.activeMower))
-						else
-							handleUDPmessage("bc1;vehEvent;activeMower;"..MPplayerName..";"..i..";"..tostring(self.activeMower), MPip, MPport)
-						end
+        				MPSend("bc1;vehEvent;activeMower;"..MPplayerName..";"..i..";"..tostring(self.activeMower))
 					end
 				end
 			end;
@@ -2270,85 +2044,71 @@ function MPCougarkeyEvent(self, unicode, sym, modifier, isDown)
 	
 	if self.isEntered then
 		local xtemp3, ytemp3, ztemp3 = getRotation(self.rotationPart.node);
-    	if isDown and sym == Input.KEY_x and self.lastSpeed < 0.0001 and not self.activeMower and ztemp3 > -1.1345 then
-			for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;transport;"..MPplayerName..";"..i..";"..tostring(self.transport))
-					else
-						handleUDPmessage("bc1;vehEvent;transport;"..MPplayerName..";"..i..";"..tostring(self.transport), MPip, MPport)
+    	if isDown then
+    		if sym == Input.KEY_x and self.lastSpeed < 0.0001 and not self.activeMower and ztemp3 > -1.1345 then
+				for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;transport;"..MPplayerName..";"..i..";"..tostring(self.transport))
 					end
 				end
-			end
-		elseif isDown and sym == Input.KEY_space and self.activeMower then
-    	    for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;globalDown;"..MPplayerName..";"..i..";"..tostring(self.globalDown))
-					else
-						handleUDPmessage("bc1;vehEvent;globalDown;"..MPplayerName..";"..i..";"..tostring(self.globalDown), MPip, MPport)
+			elseif sym == Input.KEY_space and self.activeMower then
+    		    for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;globalDown;"..MPplayerName..";"..i..";"..tostring(self.globalDown))
 					end
 				end
-			end
-		elseif isDown and sym == Input.KEY_n and self.activeMower then
-    	    for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;BackMowerRight;"..MPplayerName..";"..i..";"..tostring(self.BackMowerRight))
-					else
-						handleUDPmessage("bc1;vehEvent;BackMowerRight;"..MPplayerName..";"..i..";"..tostring(self.BackMowerRight), MPip, MPport)
+			elseif sym == Input.KEY_n and self.activeMower then
+    		    for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;BackMowerRight;"..MPplayerName..";"..i..";"..tostring(self.BackMowerRight))
 					end
 				end
-			end
-		elseif isDown and sym == Input.KEY_m and self.activeMower then
-    	    for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;BackMowerLeft;"..MPplayerName..";"..i..";"..tostring(self.BackMowerLeft))
-					else
-						handleUDPmessage("bc1;vehEvent;BackMowerLeft;"..MPplayerName..";"..i..";"..tostring(self.BackMowerLeft), MPip, MPport)
+			elseif sym == Input.KEY_m and self.activeMower then
+    		    for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;BackMowerLeft;"..MPplayerName..";"..i..";"..tostring(self.BackMowerLeft))
 					end
 				end
-			end
-		elseif isDown and sym == Input.KEY_j and self.activeMower then
-    	    for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;MiddleMowerLeft;"..MPplayerName..";"..i..";"..tostring(self.MiddleMowerLeft))
-					else
-						handleUDPmessage("bc1;vehEvent;MiddleMowerLeft;"..MPplayerName..";"..i..";"..tostring(self.MiddleMowerLeft), MPip, MPport)
+			elseif sym == Input.KEY_j and self.activeMower then
+    		    for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;MiddleMowerLeft;"..MPplayerName..";"..i..";"..tostring(self.MiddleMowerLeft))
 					end
 				end
-			end
-		elseif isDown and sym == Input.KEY_l and self.activeMower then
-    	    for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;MiddleMowerRight;"..MPplayerName..";"..i..";"..tostring(self.MiddleMowerRight))
-					else
-						handleUDPmessage("bc1;vehEvent;MiddleMowerRight;"..MPplayerName..";"..i..";"..tostring(self.MiddleMowerRight), MPip, MPport)
+			elseif sym == Input.KEY_l and self.activeMower then
+    	 	   for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;MiddleMowerRight;"..MPplayerName..";"..i..";"..tostring(self.MiddleMowerRight))
 					end
 				end
-			end
-		elseif isDown and sym == Input.KEY_k and self.activeMower then
-    	    for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if MPstate == "Client" then
-						MPudp:send("bc1;vehEvent;FrontMower;"..MPplayerName..";"..i..";"..tostring(self.FrontMower))
-					else
-						handleUDPmessage("bc1;vehEvent;FrontMower;"..MPplayerName..";"..i..";"..tostring(self.FrontMower), MPip, MPport)
+			elseif sym == Input.KEY_k and self.activeMower then
+    		    for i=1, table.getn(g_currentMission.vehicles) do
+        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
+        				MPSend("bc1;vehEvent;FrontMower;"..MPplayerName..";"..i..";"..tostring(self.FrontMower))
 					end
 				end
-			end
-		end;
+			end;
+		end
 	end
 end
 
+--OriginalUpdate functions for scripts that tend to mess mouse and other stuff in inGameMenu
+--others just work fine because of either not messing with mouse anyway or by using vehicle.lua as a base script
+function MPvehicleOriginalUpdate(self, dt, isActive)
+	original.vehicleUpdate(self, dt, isActive)
+end
+function MPCougarOriginalUpdate(self, dt)
+	original.CougarUpdate(self, dt)
+end
+
+--fake functions that do totally nothing
+function MPfakeVehicleUpdate(self, dt, isActive)
+end
+function MPfakeVehicleUpdate2(self, dt)
+end
 function MPfakeUpdate(dt)
-	return
 end
 function MPfakeFunction()
-	return
 end
 
 function MPtimescaleUpdateAddon(self)
@@ -2461,23 +2221,6 @@ function MPupdate(dt)
 			MPHeartbeat()
     		
     		if MPupdateTick2 == 30 then
-				if not MPoneTimeUpdateDone and gameMenuSystem.loadScreen.isLoaded then
-						MPoneTimeUpdateDone = true
-						if MPstate == "Client" then 
-							MPudp:send("syncCurrentMissionToClient;")
-							print("[LS2008MP] current mission sync requested")
-							MPmodifyVehicleScripts()
-						else 
-							MPmodifyVehicleScripts()
-						end
-				end
-				
-				if gameMenuSystem:isMenuActive() then
-					Player.update = MPfakeUpdate
-				else
-					Player.update = MPplayerUpdate
-				end
-				
 				if MPserverPASG then
 					MPserverPASG = false
 					--now comes the fun part, it's called
@@ -2525,42 +2268,26 @@ function MPupdate(dt)
 				MPupdateEnd = MPupdateStart+60
 			end]]
 		
-			if gameMenuSystem:isMenuActive() then
-				g_currentMission:update(dt)
-				g_currentMission.isRunning = true
-			else
+			
 				if MPupdateTick1 > 3 then
 					for i=1,#g_currentMission.vehicles do
 						if g_currentMission.vehicles[i].isEntered and (g_currentMission.vehicles[i].lastSpeed*3600) >= 1 then
 							local tempTX, tempTY, tempTZ = getTranslation(g_currentMission.vehicles[i].rootNode)
 							local tempRX, tempRY, tempRZ = getRotation(g_currentMission.vehicles[i].rootNode)
 							local UDPmoverot = "bc1;moverot;".. i..";"..(round(tempTX+0,1))..";"..(round(tempTY+0,1))..";"..(round(tempTZ+0,1)) .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
-							if MPstate == "Client" then
-								MPudp:send(UDPmoverot)
-							else
-								handleUDPmessage(UDPmoverot, MPip, MPport)
-							end
+							MPSend(UDPmoverot)
 						end
 					end
 				
 					if g_currentMission.controlPlayer then						
 						if Player.lastXPos ~= currXPos or Player.lastYPos ~= currYPos or Player.lastZPos ~= currZPos then
 							local UDPmoverot = "bc1;plr;"..MPplayerName..";"..(round(Player.lastXPos+0,1))..";"..(round(Player.lastYPos+0,1))..";"..(round(Player.lastZPos+0,1)) -- .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
-							if MPstate == "Client" then
-								MPudp:send(UDPmoverot)
-							else
-								handleUDPmessage(UDPmoverot, MPip, MPport)
-							end
-							print(UDPmoverot)
+							MPSend(UDPmoverot)
 						end
 				
 						if round(Player.rotY+0,1) ~= currYRot then
 							local UDPmoverot = "bc1;plrot;"..MPplayerName..";"..(round(Player.rotY+0,1))
-							if MPstate == "Client" then
-								MPudp:send(UDPmoverot)
-							else
-								handleUDPmessage(UDPmoverot, MPip, MPport)
-							end
+							MPSend(UDPmoverot)
 						end
 					
 						currXPos = Player.lastXPos
@@ -2570,7 +2297,7 @@ function MPupdate(dt)
 					end
 					MPupdateTick1 = 0
 				end
-			end
+				
 			MPupdateTick1 = MPupdateTick1 + 1
 		end
 	end
@@ -2831,14 +2558,14 @@ function MPvehiclesetWorldPosition(self, x, y, z, xRot, yRot, zRot)
     setRotation(self.rootNode, xRot,yRot,zRot);
 end
 
---modified in game menu render function to fix saving and remove save for client
+--modified in game menu render function to fix saving and remove the save button for client
 function MPInGameMenuRender(self)
 	if self.extraOverlay ~= nil then
         self.extraOverlay:render();
     end;
 
     if MPstate == "Client" then
-    	self.items[1] = Overlay:new("nil", "data/menu/ingame_menu_restart".. g_languageSuffix .. ".png", 0, 0, 0, 0)
+    	self.items[1] = Overlay:new("nil", "data/menu/ingame_menu_restart".. g_languageSuffix .. ".png", 0, 0, 0, 0) --replacing save with nothing
     	for i=2, table.getn(self.items) do
        		self.items[i]:render();
     	end;
@@ -2848,10 +2575,6 @@ function MPInGameMenuRender(self)
     	end;
 	end
 
-    if self.missionId ~= 0 then
-        gameMenuSystem.medalsDisplay:render();
-    end;
-
     if self.doSaveGame then
         self.doSaveGame = false;
         self.doSaveGamePart2 = true;
@@ -2860,6 +2583,28 @@ function MPInGameMenuRender(self)
         gameMenuSystem.serverMenu:saveSelectedGame();
         self.doSaveGamePart2 = false;
     end;
+end
+function MPinGameMenuMode(self)
+	self.inGameMenu:reset()
+	self.currentMenu = gameMenuSystem.inGameMenu
+	Player.update = MPfakeUpdate
+	--disabling update functions, this way it's a little bit less performance hogging
+	if Vehicle ~= nil then
+		MPvehicleOriginalUpdate = MPfakeVehicleUpdate
+	end
+	if Cougar ~= nil then
+		MPCougarOriginalUpdate = MPfakeVehicleUpdate2
+	end
+end
+function MPplayMode(self)
+	self.currentMenu = nil
+	Player.update = MPplayerUpdate
+	if Vehicle ~= nil then
+		MPvehicleOriginalUpdate = original.vehicleUpdate
+	end
+	if Cougar ~= nil then
+		MPCougarOriginalUpdate = original.CougarUpdate
+	end
 end
 
 --MP draw function
@@ -2924,8 +2669,8 @@ function MPdraw()
 			end
 		end
 	end
-	
-	original.drawing()
+		
+	original.drawing() --weird render here in the middle because some things get rendered and others don't
 	
 	if gameMenuSystem.currentMenu == gameMenuSystem.mainMenu then
 		if MPmainMenuButtonsText == true then
@@ -2959,24 +2704,28 @@ end
 --MP keyEvent function
 function MPkeyEvent(unicode, sym, modifier, isDown)
 	
-	if sym == 96 and isDown then
-		renderConsoleBackground = not renderConsoleBackground
+	if not MPchat then
+		original.keyEvent(unicode, sym, modifier, isDown) --it's handling TAB, ESC and PDA but not input bindings for some weird reason, those are in update functions..
 	end
 	
-	--client/settings menu key handling
-	if gameMenuSystem.currentMenu == gameMenuSystem.MPsettingsMenu then
-		if MPsettingsMenuSelected == "name" and isDown then
+	if isDown then
+		if sym == 96 then
+			renderConsoleBackground = not renderConsoleBackground
+		end
+	
+		--client/settings menu key handling
+		if MPsettingsMenuSelected == "name" then
 			if sym == Input.KEY_return then
 				MPsettingsMenuSelected = ""
 			elseif 32 < unicode and unicode < 127 then 
-			MPplayerName = MPplayerName..string.char(unicode)
+				MPplayerName = MPplayerName..string.char(unicode)
 			end
 			if sym == 8 then
 				if MPplayerName:len() >= 1 then
 					MPplayerName= MPplayerName:sub(1,MPplayerName:len() - 1)
 				end
 			end
-		elseif MPsettingsMenuSelected == "ip" and isDown then
+		elseif MPsettingsMenuSelected == "ip" then
 			if sym == Input.KEY_return then
 				MPsettingsMenuSelected = ""
 			elseif 32 < unicode and unicode < 127 then 
@@ -2987,7 +2736,7 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
 					MPip = MPip:sub(1,MPip:len() - 1)
 				end
 			end
-		elseif MPsettingsMenuSelected == "port" and isDown then
+		elseif MPsettingsMenuSelected == "port" then
 			if sym == Input.KEY_return then
 				MPsettingsMenuSelected = ""
 			elseif 32 < unicode and unicode < 127 then 
@@ -2995,55 +2744,49 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
 			end
 			if sym == 8 then
 				if tostring(MPport):len() >= 1 then
-					MPport = tostring(MPport):sub(1,tostring(MPport):len() - 1)
+						MPport = tostring(MPport):sub(1,tostring(MPport):len() - 1)
 				end
 			end
 		end
-	end
 	
-	--chat key handling
-	if isDown and MPchat and MPenabled then
-		if sym == Input.KEY_esc then --escape to close the chat
-			MPchat = false
-			MPchatText = ""
-			InputBinding.hasEvent = original.hasEvent
-			getInputAxis = original.getInputAxis
+		--chat key handling
+		if MPchat and MPenabled then
+			if sym == Input.KEY_esc then --escape to close the chat
+				MPchat = false
+				MPchatText = ""
+				InputBinding.hasEvent = original.hasEvent
+				getInputAxis = original.getInputAxis
+				return
+			elseif sym == Input.KEY_return then --enter/return to send the message
+				InputBinding.hasEvent = original.hasEvent
+				getInputAxis = original.getInputAxis
+				if string.len(MPchatText) ~= 0 then
+					MPSend("bc1;chat;"..MPplayerName.. ": " .. MPchatText)
+				end
+				MPchat = false
+				MPchatText = ""
+			elseif 31 < unicode and unicode < 127 then 
+				MPchatText = MPchatText..string.char(unicode)
+			end
+			if sym == 8 then
+				if MPchatText:len() >= 1 then
+					MPchatText = MPchatText:sub(1,MPchatText:len() - 1)
+				end
+			end
+		end
+		
+		--putting chat keyevent above chat open to not block game keyevents
+		
+		
+		--chat opening
+		if sym == MPchatKey and MPenabled then --open the chat
+			MPrenderHistory = true
+			MPchat = true
+			InputBinding.hasEvent = MPfakeInputBinding --disabling vehicle input bindings
+			getInputAxis = MPfakeInputAxis --disabling input axis for movement
 			return
-		elseif sym == Input.KEY_return then --enter/return to send the message
-			InputBinding.hasEvent = original.hasEvent
-			getInputAxis = original.getInputAxis
-			if string.len(MPchatText) ~= 0 then
-				if MPstate == "Client" then
-					MPudp:send("bc1;chat;"..MPplayerName.. ": " .. MPchatText)
-				else
-					handleUDPmessage("bc1;chat;"..MPplayerName.. ": " .. MPchatText, MPip, MPport)
-				end
-			end
-			MPchat = false
-			MPchatText = ""
-		elseif 31 < unicode and unicode < 127 then 
-			MPchatText = MPchatText..string.char(unicode)
-		end
-		if sym == 8 then
-			if MPchatText:len() >= 1 then
-				MPchatText = MPchatText:sub(1,MPchatText:len() - 1)
-			end
-		end
+		end;
 	end
-	
-	--putting chat keyevent above chat open to not block game keyevents
-	if not MPchat then
-		original.keyEvent(unicode, sym, modifier, isDown) --it's handling TAB, ESC and PDA but not input bindings for some weird reason, those are in update functions..
-	end
-	
-	--chat opening
-	if sym == MPchatKey and isDown and MPenabled then --open the chat
-		MPrenderHistory = true
-		MPchat = true
-		InputBinding.hasEvent = MPfakeInputBinding --disabling vehicle input bindings
-		getInputAxis = MPfakeInputAxis --disabling input axis for movement
-		return
-	end;
 end
 
 --fake InputBinding hasEvent and getInputAxis functions for chat
@@ -3090,6 +2833,15 @@ function MPServerHeartbeat()
 		--MPudp:sendto("this is a server sending data to the client", msg_or_ip, port_or_nil)
 	end
 end
+
+--MP send functions for server and client
+function MPClientSend(message) --wrapper for client
+		MPudp:send(message)
+end
+function MPServerSend(message) --wrapper for server
+		handleUDPmessage(message, MPip, MPport)
+end
+--function MPSend("blah message") should be used instead of manually MPudp:send-ing or handleUDPmessage-ing
 
 --the biggest function, the main sncer
 function handleUDPmessage(msg, msgIP, msgPort)

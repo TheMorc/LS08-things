@@ -283,6 +283,7 @@ function serverMenu:startSelectedGame()
     
 	MPinitSrvCli = false
 	MPenabled = not MPenabled
+	MPsettingsMenuSelected = "" 
 	setCaption("LS2008MP v" .. MPversion .. " | Server | ".. MPplayerName)
 end;
 
@@ -580,10 +581,12 @@ end;
 
 function OnserverMenuBack()
 	gameMenuSystem:mainMenuMode();
+	MPsettingsMenuSelected = ""
 end;
 
 function OnserverMenuPlay()
 	gameMenuSystem.serverMenu:startSelectedGame();
+	MPsettingsMenuSelected = ""
 end;
 
 function OnserverMenuDelete()

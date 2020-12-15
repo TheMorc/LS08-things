@@ -23,9 +23,6 @@ end;
 function serverLoading:delete()
     delete(self.buttonOverlay.overlayId);
     delete(self.pleaseWaitBgOverlay.overlayId);
-    --for i=1, table.getn(self.items) do
-    --    self.items[i]:delete();
-    --end;
 end;
 
 function serverLoading:addItem(item)
@@ -51,6 +48,13 @@ function serverLoading:update(dt)
     	self.items[2] = Overlay:new("nil", "data/missions/mission00_briefing".. g_languageSuffix .. ".png", 0, 0, 0, 0) --replacing overlayBriefing with hidden overlay to not spam errors
         self.buttonOverlay = Overlay:new("play_button", "data/menu/ingame_play_button".. g_languageSuffix .. ".png", 0.5-0.15/2, 0.02, 0.15, 0.06);
         self:addItem(OverlayButton:new(self.buttonOverlay, OnserverLoadingFinish));
+        MPupdateTick2 = 29 --speedup the tick thing
+        MPoneTimeUpdateDone = true --oneTimeUpdateDone moved from MPupdate here, it's just more convenient
+		MPmodifyVehicleScripts()
+		if MPstate == "Client" then 
+			MPudp:send("syncCurrentMissionToClient;")
+			print("[LS2008MP] current mission sync requested")
+		end
     end;
 end;
 
@@ -58,16 +62,11 @@ function OnserverLoadingFinish()
     gameMenuSystem.currentMenu:delete();
     gameMenuSystem:playMode();
     setShowMouseCursor(false);
-    --g_currentMission.isRunning = true;
 end
 
 function serverLoading:render()
     for i=self.renderFrom, table.getn(self.items) do
         self.items[i]:render();
-    end;
-    
-    if self.missionId ~= 0 then
-        gameMenuSystem.medalsDisplay:render();
     end;
     
     if not self.isLoaded then
