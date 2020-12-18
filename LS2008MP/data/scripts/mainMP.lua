@@ -3,7 +3,7 @@
 -- beware!, this is an incredible spaghetti code and although it works somehow i just don't recommend even trying to touch it
 -- because it may break out of sudden and not a single person will ever fix it. 
 -- @author  Richard Gráčik (mailto:r.gracik@gmail.com)
--- @date  10.11.2020 - 15.12.2020
+-- @date  10.11.2020 - 18.12.2020
 
 MPloaded = false
 MPversion = "0.11 luasockets"
@@ -30,7 +30,6 @@ MPupdateStart = os.time()
 MPupdateEnd = MPupdateStart
 MPupdateTick1 = 0
 MPupdateTick2 = 0
-MPticking = true --disabled when syncing new players (just like in LS2011 and newer)
 
 --MP chat veriables
 MPchat = false --chat view status
@@ -39,7 +38,7 @@ MPchatHistory = {" ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " "
 MPrenderHistory = false;
 MPrenderHistoryCounterStart = os.time()
 MPrenderHistoryCounterEnd = MPrenderHistoryCounterStart+20  
-MPchatlogFilename = "chatlog_"..os.date("%d.%m.%Y_%H.%M.%S")..".txt"
+MPchatlogFilename = "chatlog_"..os.date("%d.%m.%Y_%H.%M.%S")..".txt" --generating file name on preinit
 
 --MP player list
 MPplayers = {}
@@ -85,7 +84,7 @@ function init()
 	original.loadVehicle = BaseMission.loadVehicle
 	
 	--rewrite update and draw functions with MP versions
-	print("[LS2008MP] main.lua injector - rewriting functions with MP version") -- just so it's a bit better to separate errors
+	print("[LS2008MP] main.lua injector - adding MP support to original scripts") -- just so it's a bit better to separate errors
 	update = MPupdate
 	draw = MPdraw
 	keyEvent = MPkeyEvent
@@ -284,8 +283,9 @@ function MPclientMenuConnect()
 
 	MPClientHeartbeat()
 	
-	--MPupdateStart = os.time()
-	--MPupdateEnd = MPupdateStart+60
+	--a weird timeout check
+	MPupdateStart = os.time()
+	MPupdateEnd = MPupdateStart+30
 	
 end;
 function MPclientMenuConnContinue()
@@ -293,14 +293,12 @@ function MPclientMenuConnContinue()
     setTerrainLoadDirectory(MPclientDir);
     
     g_missionLoaderDesc = {};
-    g_missionLoaderDesc.scriptFilename = "data/missions/mission00.lua";
-    g_missionLoaderDesc.scriptClass = "Mission00";
-    g_missionLoaderDesc.id = 0;
-    g_missionLoaderDesc.bronze = 0;
-    g_missionLoaderDesc.silver = 0;
-    g_missionLoaderDesc.gold = 0;
-    g_missionLoaderDesc.overlayBriefing = gameMenuSystem.serverMenu.quickPlayBriefingOverlay;
-    g_missionLoaderDesc.backgroundOverlay = gameMenuSystem.serverMenu.quickPlayBriefingBackgroundOverlay;
+    if isOriginalGame then
+    	g_missionLoaderDesc.scriptFilename = "data/scripts/multiplayer/originalMission00.lua";
+    	print("[LS2008MP] loading newer mission00 for vehicle.xml support")
+    else
+    	g_missionLoaderDesc.scriptFilename = "data/missions/mission00.lua";
+    end
     g_missionLoaderDesc.overlayBriefingMedals = nil;
     g_missionLoaderDesc.stats = MPclientsavegame.stats;
     g_missionLoaderDesc.vehiclesXML = MPclientsavegame.vehiclesXML;
@@ -308,11 +306,11 @@ function MPclientMenuConnContinue()
     stopSample(g_menuMusic);
 
     gameMenuSystem.loadScreen = serverLoading:new(OnLoadingScreen);
-    gameMenuSystem.loadScreen:setScriptInfo(g_missionLoaderDesc.scriptFilename, g_missionLoaderDesc.scriptClass);
-    gameMenuSystem.loadScreen:setMissionInfo(g_missionLoaderDesc.id, g_missionLoaderDesc.bronze, g_missionLoaderDesc.silver, g_missionLoaderDesc.gold);
-    gameMenuSystem.loadScreen:addItem(g_missionLoaderDesc.backgroundOverlay);
-    gameMenuSystem.loadScreen:addItem(g_missionLoaderDesc.overlayBriefing);
-    gameMenuSystem.inGameMenu:setMissionId(g_missionLoaderDesc.id);
+    gameMenuSystem.loadScreen:setScriptInfo(g_missionLoaderDesc.scriptFilename, "Mission00");
+    gameMenuSystem.loadScreen:setMissionInfo(0, 0, 0, 0);
+    gameMenuSystem.loadScreen:addItem(gameMenuSystem.serverMenu.quickPlayBriefingBackgroundOverlay);
+    gameMenuSystem.loadScreen:addItem(gameMenuSystem.serverMenu.quickPlayBriefingOverlay);
+    gameMenuSystem.inGameMenu:setMissionId(0);
 
     gameMenuSystem.currentMenu = gameMenuSystem.loadScreen;
 	setCaption("LS2008MP v" .. MPversion .. " | Client | ".. MPplayerName)
@@ -2216,8 +2214,11 @@ function MPupdate(dt)
 				MPinitSrvCli = false
 				MPenabled = false
 			end
-		elseif g_currentMission ~= nil then
 			
+			original.update(dt)
+			return
+		end
+		
 			MPHeartbeat()
     		
     		if MPupdateTick2 == 30 then
@@ -2228,7 +2229,7 @@ function MPupdate(dt)
 					--be prepared for crazy things and workarounds...
 
 					--saving the game before sending data
-					--gameMenuSystem.serverMenu:saveSelectedGame(); disabling it because it crashes with ModAgri on Wine
+					gameMenuSystem.serverMenu:saveSelectedGame();
 					copyFile(gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."/wheat_density.png", gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."/z_MPfake.file", false);
 		
 					--preparing file list
@@ -2257,54 +2258,40 @@ function MPupdate(dt)
 				MPupdateTick2 = 0
 			end
 			MPupdateTick2 = MPupdateTick2 + 1
-    	
-			if not MPticking then
-				g_currentMission.isRunning = false
-				return
-			end
-		
-			--[[if os.time() >= MPupdateEnd then
-				MPupdateStart = os.time()
-				MPupdateEnd = MPupdateStart+60
-			end]]
-		
-			
-				if MPupdateTick1 > 3 then
-					for i=1,#g_currentMission.vehicles do
-						if g_currentMission.vehicles[i].isEntered and (g_currentMission.vehicles[i].lastSpeed*3600) >= 1 then
-							local tempTX, tempTY, tempTZ = getTranslation(g_currentMission.vehicles[i].rootNode)
-							local tempRX, tempRY, tempRZ = getRotation(g_currentMission.vehicles[i].rootNode)
-							local UDPmoverot = "bc1;moverot;".. i..";"..(round(tempTX+0,1))..";"..(round(tempTY+0,1))..";"..(round(tempTZ+0,1)) .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
-							MPSend(UDPmoverot)
-						end
+
+			if MPupdateTick1 > 3 then
+				for i=1,#g_currentMission.vehicles do
+					if g_currentMission.vehicles[i].isEntered and (g_currentMission.vehicles[i].lastSpeed*3600) >= 1 then
+						local tempTX, tempTY, tempTZ = getTranslation(g_currentMission.vehicles[i].rootNode)
+						local tempRX, tempRY, tempRZ = getRotation(g_currentMission.vehicles[i].rootNode)
+						local UDPmoverot = "bc1;m;".. i..";"..(round(tempTX+0,1))..";"..(round(tempTY+0,1))..";"..(round(tempTZ+0,1)) .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
+						MPSend(UDPmoverot)
 					end
-				
-					if g_currentMission.controlPlayer then						
-						if Player.lastXPos ~= currXPos or Player.lastYPos ~= currYPos or Player.lastZPos ~= currZPos then
-							local UDPmoverot = "bc1;plr;"..MPplayerName..";"..(round(Player.lastXPos+0,1))..";"..(round(Player.lastYPos+0,1))..";"..(round(Player.lastZPos+0,1)) -- .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
-							MPSend(UDPmoverot)
-						end
-				
-						if round(Player.rotY+0,1) ~= currYRot then
-							local UDPmoverot = "bc1;plrot;"..MPplayerName..";"..(round(Player.rotY+0,1))
-							MPSend(UDPmoverot)
-						end
-					
-						currXPos = Player.lastXPos
-						currYPos = Player.lastYPos
-						currZPos = Player.lastZPos
-						currYRot = round(Player.rotY+0,1) --rounding Y rot to not spam client/servers with the same rotation
-					end
-					MPupdateTick1 = 0
 				end
+			
+				if g_currentMission.controlPlayer then						
+					if Player.lastXPos ~= currXPos or Player.lastYPos ~= currYPos or Player.lastZPos ~= currZPos then
+						local UDPmoverot = "bc1;plr;"..MPplayerName..";"..(round(Player.lastXPos+0,1))..";"..(round(Player.lastYPos+0,1))..";"..(round(Player.lastZPos+0,1)) -- .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
+						MPSend(UDPmoverot)
+					end
+		
+						if round(Player.rotY+0,1) ~= currYRot then
+						local UDPmoverot = "bc1;plrot;"..MPplayerName..";"..(round(Player.rotY+0,1))
+						MPSend(UDPmoverot)
+					end
 				
+					currXPos = Player.lastXPos
+					currYPos = Player.lastYPos
+					currZPos = Player.lastZPos
+					currYRot = round(Player.rotY+0,1) --rounding Y rot to not spam client/servers with the same rotation
+				end
+	
+				MPupdateTick1 = 0
+			end			
 			MPupdateTick1 = MPupdateTick1 + 1
-		end
 	end
 	
-	
 	original.update(dt)
-	
 end
 
 --MP modify vehicle scripts, called from MPupdate
@@ -2841,7 +2828,7 @@ end
 function MPServerSend(message) --wrapper for server
 		handleUDPmessage(message, MPip, MPport)
 end
---function MPSend("blah message") should be used instead of manually MPudp:send-ing or handleUDPmessage-ing
+--function MPSend("blah message") should be used instead of manually MPudp:send-ing or handleUDPmessage-ing but it depends on usage
 
 --the biggest function, the main sncer
 function handleUDPmessage(msg, msgIP, msgPort)
@@ -2859,8 +2846,8 @@ function handleUDPmessage(msg, msgIP, msgPort)
     		if file ~= nil then
     			local receivedFile = split(file, ';')
 				print("[LS2008MP] receiving file ".. receivedFile[1])
-    			--MPfileSave = assert(io.open(gameMenuSystem.quickPlayMenu:getSavegameDirectory(6).."/"..receivedFile[1], "wb"))
-				--MPfileSave:write(b64dec(receivedFile[2])) disabling because of ModAgri crashes
+    			MPfileSave = assert(io.open(gameMenuSystem.quickPlayMenu:getSavegameDirectory(6).."/"..receivedFile[1], "wb"))
+				MPfileSave:write(b64dec(receivedFile[2]))
     		end
     		if status == "closed" then
     			print("[LS2008MP] saying bye to the TCP file server :(") 
@@ -2886,21 +2873,21 @@ function handleUDPmessage(msg, msgIP, msgPort)
 		MPclientMenuConnContinue()
 		printChat("You are playing with " .. playerList) --print the new composed string
 		
-	elseif p[1] == "moverot" then --CLIENT recieve and move vehicle
+	elseif p[1] == "m" --[[moverot]] then --CLIENT recieve and move vehicle
 		if g_currentMission.vehicles[p[2]+0].MPsitting then
 			setTranslation(g_currentMission.vehicles[p[2]+0].rootNode, p[3]+0, p[4]+0, p[5]+0)
 			setRotation(g_currentMission.vehicles[p[2]+0].rootNode, p[6]+0, p[7]+0, p[8]+0)
 			g_currentMission.vehicles[p[2]+0].movingDirection = 1
 		end	
 	elseif p[1] == "playerConnecting" then
-		MPshowNewPlayerWarning = true
-		MPnewPlayerName = p[2]
-		MPticking = false
-		MPaddToPlayerList(p[2])
+		MPshowNewPlayerWarning = true --MPdraw variable
+		MPnewPlayerName = p[2] --MPdraw variable
+		g_currentMission.isRunning = false --disabling isRunning
+		MPaddToPlayerList(p[2]) --MPplayerList thing
 	elseif p[1] == "playerConnected" then
 		MPshowNewPlayerWarning = false
 		MPnewPlayerName = ""
-		MPticking = true
+		g_currentMission.isRunning = true
 	elseif p[1] == "enteredVehicle" then --set current vehicle to entered
 		for i=1,#MPplayers do
 			if p[2] == MPplayers[i] then

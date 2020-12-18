@@ -258,13 +258,6 @@ function serverMenu:startSelectedGame()
     else
     	g_missionLoaderDesc.scriptFilename = "data/missions/mission00.lua";
     end
-    g_missionLoaderDesc.scriptClass = "Mission00";
-    g_missionLoaderDesc.id = 0;
-    g_missionLoaderDesc.bronze = 0;
-    g_missionLoaderDesc.silver = 0;
-    g_missionLoaderDesc.gold = 0;
-    g_missionLoaderDesc.overlayBriefing = self.quickPlayBriefingOverlay;
-    g_missionLoaderDesc.backgroundOverlay = self.quickPlayBriefingBackgroundOverlay;
     g_missionLoaderDesc.overlayBriefingMedals = nil;
     g_missionLoaderDesc.stats = savegame.stats;
     g_missionLoaderDesc.vehiclesXML = savegame.vehiclesXML;
@@ -272,11 +265,11 @@ function serverMenu:startSelectedGame()
     stopSample(g_menuMusic);
 
     gameMenuSystem.loadScreen = serverLoading:new(OnLoadingScreen);
-    gameMenuSystem.loadScreen:setScriptInfo(g_missionLoaderDesc.scriptFilename, g_missionLoaderDesc.scriptClass);
-    gameMenuSystem.loadScreen:setMissionInfo(g_missionLoaderDesc.id, g_missionLoaderDesc.bronze, g_missionLoaderDesc.silver, g_missionLoaderDesc.gold);
-    gameMenuSystem.loadScreen:addItem(g_missionLoaderDesc.backgroundOverlay);
-    gameMenuSystem.loadScreen:addItem(g_missionLoaderDesc.overlayBriefing);
-    gameMenuSystem.inGameMenu:setMissionId(g_missionLoaderDesc.id);
+    gameMenuSystem.loadScreen:setScriptInfo(g_missionLoaderDesc.scriptFilename, "Mission00");
+    gameMenuSystem.loadScreen:setMissionInfo(0, 0, 0, 0);
+    gameMenuSystem.loadScreen:addItem(self.quickPlayBriefingBackgroundOverlay);
+    gameMenuSystem.loadScreen:addItem(self.quickPlayBriefingOverlay);
+    gameMenuSystem.inGameMenu:setMissionId(0);
 
     gameMenuSystem.currentMenu = gameMenuSystem.loadScreen;
     
