@@ -1,4 +1,10 @@
 print("[LS2008MP] adding CombineAP2")
+MPcustomScripts[#MPcustomScripts+1] = "CombineAP2"
+function MPCombineAP2ScriptUpdate()
+	original.CombineAP2keyEvent = CombineAP2.keyEvent
+	CombineAP2.keyEvent = MPCombineAP2keyEvent
+	scriptState = true
+end
 
 function MPCombineAP2keyEvent(self, unicode, sym, modifier, isDown)
 	original.CombineAP2keyEvent(self, unicode, sym, modifier, isDown)

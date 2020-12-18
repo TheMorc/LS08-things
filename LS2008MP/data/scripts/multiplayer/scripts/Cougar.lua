@@ -1,6 +1,15 @@
 --the first external custom script for LS2008MP ever on the world
 --created on 18.12.2020, 23:37 by Morc
 print("[LS2008MP] adding Cougar")
+MPcustomScripts[#MPcustomScripts+1] = "Cougar"
+function MPCougarScriptUpdate()
+	original.CougarUpdate = Cougar.update
+	original.CougarkeyEvent = Cougar.keyEvent
+	Cougar.update = MPCougarUpdate
+	Cougar.keyEvent = MPCougarkeyEvent
+	scriptState = true
+end
+
 
 function MPCougarUpdate(self, dt)
 	MPCougarOriginalUpdate(self, dt)

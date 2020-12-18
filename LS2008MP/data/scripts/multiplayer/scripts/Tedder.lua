@@ -1,4 +1,13 @@
 print("[LS2008MP] adding Tedder")
+MPcustomScripts[#MPcustomScripts+1] = "Tedder"
+function MPTedderScriptUpdate()
+	original.TedderUpdate = Tedder.update
+	original.TedderkeyEvent = Tedder.keyEvent
+	Tedder.update = MPTedderUpdate
+	Tedder.keyEvent = MPTedderkeyEvent
+	scriptState = true
+end
+
 
 function MPTedderUpdate(self, dt)
 	original.TedderUpdate(self, dt)

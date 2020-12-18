@@ -1,4 +1,10 @@
 print("[LS2008MP] adding Combine2")
+MPcustomScripts[#MPcustomScripts+1] = "Combine2"
+function MPCombine2ScriptUpdate()
+	original.ClaasJaguarAPkeyEvent = ClaasJaguarAP.keyEvent
+	ClaasJaguarAP.keyEvent = MPClaasJaguarAPkeyEvent --using the same keyevent update as for CombineAP2
+	scriptState = true
+end
 
 function MPCombine2keyEvent(self, unicode, sym, modifier, isDown)
 	original.Combine2keyEvent(self, unicode, sym, modifier, isDown)

@@ -3,7 +3,7 @@
 -- beware!, this is an incredible spaghetti code and although it works somehow i just don't recommend even trying to touch it
 -- because it may break out of sudden and not a single person will ever fix it. 
 -- @author  Richard Gráčik (mailto:r.gracik@gmail.com)
--- @date  10.11.2020 - 18.12.2020
+-- @date  10.11.2020 - 19.12.2020
 
 MPloaded = false
 MPversion = "0.11 luasockets"
@@ -1269,122 +1269,17 @@ function MPmodifyVehicleScripts()
 	end
 	print("[LS2008MP] game script modification finished")
 	
-	
-	if Combine2 ~= nil then
-		original.Combine2attachCutter = Combine2.attachCutter
-		original.Combine2detachCurrentCutter = Combine2.detachCurrentCutter
-		original.Combine2Update = Combine2.update
-		Combine2.attachCutter = MPCombine2attachCutter
-		Combine2.detachCurrentCutter = MPCombine2detachCurrentCutter
-		Combine2.update = MPCombine2Update
-		original.Combine2keyEvent = Combine2.keyEvent
-		Combine2.keyEvent = MPCombine2keyEvent
-		print(string.format(modifiedCus, "Combine2"))
-	else
-		print(string.format(noCusScript, "Combine2"))
+	--custom script modification updater
+	for i,script in ipairs(MPcustomScripts) do
+		local customScript = "MP"..script.."ScriptUpdate()"
+		loadstring(customScript)();
+		if scriptState then
+			print(string.format(modifiedCus, script))
+		else
+			print(string.format(noCusScript, script))
+		end
+		scriptState = false
 	end
-	
-	if CombineAP2 ~= nil then
-		original.CombineAP2keyEvent = CombineAP2.keyEvent
-		CombineAP2.keyEvent = MPCombineAP2keyEvent
-		print(string.format(modifiedCus, "CombineAP2"))
-	else
-		print(string.format(noCusScript, "CombineAP2"))
-	end
-	
-	if Lexion400AP ~= nil then
-		original.Lexion400APUpdate = Lexion400AP.update
-		original.Lexion400APkeyEvent = Lexion400AP.keyEvent
-		Lexion400AP.keyEvent = MPLexion400APkeyEvent --using the same keyevent update as for CombineAP2
-		Lexion400AP.update = MPLexion400APUpdate
-		print(string.format(modifiedCus, "Lexion400AP"))
-	else
-		print(string.format(noCusScript, "Lexion400AP"))
-	end
-	
-	if ClaasJaguarAP ~= nil then
-		original.ClaasJaguarAPkeyEvent = ClaasJaguarAP.keyEvent
-		ClaasJaguarAP.keyEvent = MPClaasJaguarAPkeyEvent --using the same keyevent update as for CombineAP2
-		print(string.format(modifiedCus, "ClaasJaguarAP"))
-	else
-		print(string.format(noCusScript, "ClaasJaguarAP"))
-	end
-	
-	if PloughWithDrum ~= nil then
-		original.PloughWithDrumUpdate = PloughWithDrum.update
-		PloughWithDrum.update = MPPloughWithDrumUpdate
-		print(string.format(modifiedCus, "PloughWithDrum"))
-	else
-		print(string.format(noCusScript, "PloughWithDrum"))
-	end
-	
-	if ares ~= nil then
-		original.areskeyEvent = ares.keyEvent
-		original.aresUpdate = ares.update
-		ares.update = MParesUpdate
-		ares.keyEvent = MPareskeyEvent
-		print(string.format(modifiedCus, "ares"))
-	else
-		print(string.format(noCusScript, "ares"))
-	end
-	
-	if renault ~= nil then
-		original.renaultkeyEvent = renault.keyEvent
-		original.renaultUpdate = renault.update
-		renault.update = MPrenaultUpdate
-		renault.keyEvent = MPrenaultkeyEvent
-		print(string.format(modifiedCus, "renault"))
-	else
-		print(string.format(noCusScript, "renault"))
-	end
-	
-	if case ~= nil then
-		original.casekeyEvent = case.keyEvent
-		original.caseUpdate = case.update
-		case.keyEvent = MPcasekeyEvent
-		case.update = MPcaseUpdate
-		print(string.format(modifiedCus, "case"))
-	else
-		print(string.format(noCusScript, "case"))
-	end
-	
-	if Nh ~= nil then
-		original.NhkeyEvent = Nh.keyEvent
-		original.NhUpdate = Nh.update
-		Nh.keyEvent = MPNhkeyEvent
-		Nh.update = MPNhUpdate
-		print(string.format(modifiedCus, "Nh"))
-	else
-		print(string.format(noCusScript, "Nh"))
-	end
-	
-	if Tedder ~= nil then
-		original.TedderUpdate = Tedder.update
-		original.TedderkeyEvent = Tedder.keyEvent
-		Tedder.update = MPTedderUpdate
-		Tedder.keyEvent = MPTedderkeyEvent
-		print(string.format(modifiedCus, "Tedder"))
-	else	
-		print(string.format(noCusScript, "Tedder"))
-	end
-	
-	if CutterAP ~= nil then
-		--start this mess lol
-		print(string.format(modifiedCus, "CutterAP"))
-	else
-		print(string.format(noCusScript, "CutterAP"))
-	end
-	
-	if Cougar ~= nil then
-		original.CougarUpdate = Cougar.update
-		original.CougarkeyEvent = Cougar.keyEvent
-		Cougar.update = MPCougarUpdate
-		Cougar.keyEvent = MPCougarkeyEvent
-		print(string.format(modifiedCus, "Cougar"))
-	else
-		print(string.format(noCusScript, "Cougar"))
-	end
-	
 	print("[LS2008MP] custom script modification finished")
 end
 

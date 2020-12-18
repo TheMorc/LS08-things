@@ -2,6 +2,39 @@ print("[LS2008MP] adding ares")
 print("[LS2008MP] adding Nh")
 print("[LS2008MP] adding case")
 print("[LS2008MP] adding renault")
+MPcustomScripts[#MPcustomScripts+1] = "ares"
+MPcustomScripts[#MPcustomScripts+1] = "Nh"
+MPcustomScripts[#MPcustomScripts+1] = "case"
+MPcustomScripts[#MPcustomScripts+1] = "renault"
+function MParesScriptUpdate()
+	original.areskeyEvent = ares.keyEvent
+	original.aresUpdate = ares.update
+	ares.update = MParesUpdate
+	ares.keyEvent = MPareskeyEvent
+	scriptState = true
+end
+function MPNhScriptUpdate()
+	original.NhkeyEvent = Nh.keyEvent
+	original.NhUpdate = Nh.update
+	Nh.keyEvent = MPNhkeyEvent
+	Nh.update = MPNhUpdate
+	scriptState = true
+end
+function MPcaseScriptUpdate()
+	original.casekeyEvent = case.keyEvent
+	original.caseUpdate = case.update
+	case.keyEvent = MPcasekeyEvent
+	case.update = MPcaseUpdate
+	scriptState = true
+end
+function MPrenaultScriptUpdate()
+	original.renaultkeyEvent = renault.keyEvent
+	original.renaultUpdate = renault.update
+	renault.update = MPrenaultUpdate
+	renault.keyEvent = MPrenaultkeyEvent
+	scriptState = true
+end
+
 
 function MParesUpdate(self, dt)
 	original.aresUpdate(self, dt)

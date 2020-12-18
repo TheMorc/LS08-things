@@ -1,4 +1,10 @@
 print("[LS2008MP] adding PloughWithDrum")
+MPcustomScripts[#MPcustomScripts+1] = "PloughWithDrum"
+function MPPloughWithDrumScriptUpdate()
+	original.PloughWithDrumUpdate = PloughWithDrum.update
+	PloughWithDrum.update = MPPloughWithDrumUpdate
+	scriptState = true
+end
 
 function MPPloughWithDrumUpdate(self, dt)
 	original.PloughWithDrumUpdate(self, dt)
