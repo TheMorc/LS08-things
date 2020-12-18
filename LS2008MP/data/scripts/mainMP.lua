@@ -92,7 +92,6 @@ function init()
 
 	--write functions to the "original" class
 	original.drawing = draw
-	original.update = update
 	original.keyEvent = keyEvent
 	original.playerUpdate = Player.update
 	original.hasEvent = InputBinding.hasEvent
@@ -114,6 +113,7 @@ function init()
 	BaseMission.loadVehicle = MPloadVehicle
 	GameMenuSystem.inGameMenuMode = MPinGameMenuMode
 	GameMenuSystem.playMode = MPplayMode
+	BaseMission.getVehicleInRange = MPgetVehicleInRange
 		
 	print("[LS2008MP] main.lua injector - finished")
 		
@@ -131,14 +131,14 @@ function init()
 		isOriginalGame = true
 		MPtimescaleUpdate = MPtimescaleUpdateOriginal
 	else
-		print("[LS2008MP] well, unable to detect game or modpack, better report this to Morc")
+		print("[LS2008MP] WARNING: well, unable to detect game or modpack, better report this to Morc")
 		MPtimescaleUpdate = MPtimescaleUpdateOriginal --failsafe fallback to original 
 	end
 	
 	
 	print("[LS2008MP] loading multiplayer settings from multiplayer.lua")
 	if not pcall(require, "multiplayer") then --load multiplayer.lua settings file and print failed message if not found
-		print("[LS2008MP] failed to load multiplayer.lua, maybe the file is missing")
+		print("[LS2008MP] ERROR: failed to load multiplayer.lua, maybe the file is missing")
 	end  
 	if MPplayerNameRndNums then
 		MPplayerName = MPplayerName .. math.random (150)
@@ -146,54 +146,55 @@ function init()
 	print("[LS2008MP] server address: " .. MPip .. ":" .. MPport)
 	if MPplayerName == nil then
 		MPplayerName = "Player"
-		print("[LS2008MP] no player name in multiplayer.lua, setting it to Player")
+		print("[LS2008MP] WARNING: no player name in multiplayer.lua, setting it to Player")
 	end
 	--removing illegal characters from name
 	MPplayerName = MPplayerName:gsub('[^%w_-><+*/]', '')
 	print("[LS2008MP] player name: " .. MPplayerName) 
 	if MPchatKey == nil then
 		MPchatKey = Input.KEY_t
-		print("[LS2008MP] no chat key binding in multiplayer.lua, setting it to 116 - Input.KEY_t") 
+		print("[LS2008MP] WARNING: no chat key binding in multiplayer.lua, setting it to 116 - Input.KEY_t") 
 	end
 	print("[LS2008MP] current chat key binding: " .. MPchatKey) 
 	
 	
 	print("[LS2008MP] loading i18n")
+	local notFoundText = "[LS2008MP] WARNING: %s not found in multiplayer.lua, defaulting to \"%s\""
 	if MPmenuPlayerText == nil then
 		MPmenuPlayerText = "Player name"
-		print("[LS2008MP] MPmenuPlayerText not found in multiplayer.lua, defaulting to \"" .. MPmenuPlayerText .. "\"") 
+		print(string.format(notFoundText, "MPmenuPlayerText", MPmenuPlayerText)) 
 	end
 	if MPmenuIPText == nil then
 		MPmenuIPText = "  IP address"
-		print("[LS2008MP] MPmenuIPText not found in multiplayer.lua, defaulting to \"" .. MPmenuIPText .. "\"") 
+		print(string.format(notFoundText, "MPmenuIPText", MPmenuIPText)) 
 	end
 	if MPmenuPortText == nil then
 		MPmenuPortText = "Port number"
-		print("[LS2008MP] MPmenuPortText not found in multiplayer.lua, defaulting to \"" .. MPmenuPortText .. "\"")  
+		print(string.format(notFoundText, "MPmenuPortText", MPmenuPortText))  
 	end
 	if MPmenuWaitText == nil then
 		MPmenuWaitText = "Wait.."
-		print("[LS2008MP] MPmenuWaitText not found in multiplayer.lua, defaulting to \"" .. MPmenuWaitText .. "\"") 
+		print(string.format(notFoundText, "MPmenuWaitText", MPmenuWaitText)) 
 	end
 	if MPsyncingDataText == nil then
 		MPsyncingDataText = "Syncing game data with %s\n          Please wait..."
-		print("[LS2008MP] MPsyncingDataText not found in multiplayer.lua, defaulting to \"" .. MPsyncingDataText .. "\"") 
+		print(string.format(notFoundText, "MPsyncingDataText", MPsyncingDataText)) 
 	end
 	if MPmenuServerButton == nil then
 		MPmenuServerButton = "Host"
-		print("[LS2008MP] MPmenuServerButton not found in multiplayer.lua, defaulting to \"" .. MPsyncingDataText .. "\"") 
+		print(string.format(notFoundText, "MPmenuServerButton", MPmenuServerButton)) 
 	end
 	if MPmenuClientButton == nil then
 		MPmenuClientButton = "Join"
-		print("[LS2008MP] MPmenuClientButton not found in multiplayer.lua, defaulting to \"" .. MPsyncingDataText .. "\"") 
+		print(string.format(notFoundText, "MPmenuClientButton", MPmenuClientButton)) 
 	end
 	if MPplayerListSitting1 == nil then
 		MPplayerListSitting1 = "%s sitting"
-		print("[LS2008MP] MPplayerListSitting1 not found in multiplayer.lua, defaulting to \"" .. MPsyncingDataText .. "\"") 
+		print(string.format(notFoundText, "MPplayerListSitting1", MPplayerListSitting1)) 
 	end
 	if MPplayerListSitting2 == nil then
 		MPplayerListSitting2 = "%s sitting in %s"
-		print("[LS2008MP] MPplayerListSitting2 not found in multiplayer.lua, defaulting to \"" .. MPsyncingDataText .. "\"") 
+		print(string.format(notFoundText, "MPplayerListSitting2", MPplayerListSitting2)) 
 	end
 	
 	
@@ -487,6 +488,24 @@ function MPtoggleVehicle(self)
 
     end;
 end
+function MPgetVehicleInRange(self, threshold, vehicles, referenceId)
+	local px, py, pz = getWorldTranslation(referenceId);
+    local nearestVehicle = nil;
+    local nearestDistance = threshold;
+
+    for i=1, table.getn(vehicles) do
+        if not vehicles[i].MPsitting then --replaced isBroken with MPsitting, this then causes to not allow showing the steerable as drivable
+            local vx, vy, vz = getWorldTranslation(vehicles[i].rootNode);
+            local distance = Utils.vector2Length(px-vx, pz-vz);
+            if distance < nearestDistance then
+                nearestVehicle = vehicles[i];
+                nearestDistance = distance;
+            end;
+        end;
+    end;
+    return nearestVehicle;
+end
+
 
 function MPsyncAttachImplement(vehicle, object, index)
 	original.attachImplement(vehicle, object, index)
@@ -1773,7 +1792,7 @@ end
 
 function MPCougarUpdate(self, dt)
 	MPCougarOriginalUpdate(self, dt)
-	
+		
 	if self.MPsitting then
 		if self.MPinputEvent == "transport" then
 			self.MPinputEvent = ""
@@ -2283,6 +2302,22 @@ function MPmission00Update(self, dt)
         end;
 end
 function MPupdate(dt)
+
+	--modified update function from main.lua
+    for i=1, 16 do
+        local isDown = getInputButton(i-1) > 0;
+        g_inputButtonEvent[i] = isDown and not g_inputButtonLast[i];
+        g_inputButtonLast[i] = isDown;
+    end;
+
+    -- update gui
+    gameMenuSystem:update(dt);
+
+    if g_currentMission ~= nil then
+        g_currentMission:update(dt);
+    end;
+    --end of update
+
 	
 	if MPenabled then
 		if MPstate == "Client" and g_currentMission == nil then
@@ -2295,8 +2330,7 @@ function MPupdate(dt)
 				MPinitSrvCli = false
 				MPenabled = false
 			end
-			
-			original.update(dt)
+
 			return
 		end
 		
@@ -2371,8 +2405,6 @@ function MPupdate(dt)
 			end			
 			MPupdateTick1 = MPupdateTick1 + 1
 	end
-	
-	original.update(dt)
 end
 
 --MP modify vehicle scripts, called from MPupdate
@@ -2655,6 +2687,7 @@ function MPInGameMenuRender(self)
     end;
 end
 function MPinGameMenuMode(self)
+	print("[LS2008MP] inGameMenu mode")
 	self.inGameMenu:reset()
 	if MPstate == "Client" then --replace save button if on client
 		gameMenuSystem.inGameMenu.items[1] = Overlay:new("MPplayerOverlay", "data/missions/hud_help_base.png", 0.012, 0.18, 0.425, 0.8);
@@ -2672,6 +2705,7 @@ function MPinGameMenuMode(self)
 	end
 end
 function MPplayMode(self)
+	print("[LS2008MP] playMode mode")
 	self.currentMenu = nil
 	Player.update = MPplayerUpdate
 	if Vehicle ~= nil then
@@ -2693,14 +2727,14 @@ function MPdraw()
 	
 	setTextBold(true);
 	local MPgameText = "LS2008MP v" .. MPversion
-	if MPrenderDebugText == true then
+	if MPrenderDebugText then
 		MPgameText = "LS2008MP v" .. MPversion .. " | " .. MPstate .. " | Name: " .. MPplayerName .. " | IP: " .. MPip .. ":" .. MPport
 		renderText(0.0, 0.96, 0.02, lastUDPmessage) --handy last message render thing, useful for finding some bugs
 	end
 	renderText(0.0, 0.98, 0.02, MPgameText);
 	setTextBold(false);
 	
-	if g_currentMission ~= nil then
+	--if g_currentMission ~= nil then
 		for i=1,#MPplayerVehicle do
 			if MPplayers[i] ~= MPplayerName and MPplayers[i] ~= "N/A" then
     			setTextBold(true);
@@ -2724,10 +2758,9 @@ function MPdraw()
     			setTextBold(false);
 			end
 		end	
-    end
+    --end
 	
 	if MPchat then
-		g_currentMission.missionStats.showPDA = false --hiding the PDA
 		hudMPchatTextField:render() 
 		renderText(0.0, 0.45, 0.03, MPchatText);
 	end
@@ -2892,6 +2925,7 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
 		if sym == MPchatKey and MPenabled then --open the chat
 			MPrenderHistory = true
 			MPchat = true
+			g_currentMission.missionStats.showPDA = false --hiding the PDA
 			InputBinding.hasEvent = MPfakeInputBinding --disabling vehicle input bindings
 			getInputAxis = MPfakeInputAxis --disabling input axis for movement
 			return
