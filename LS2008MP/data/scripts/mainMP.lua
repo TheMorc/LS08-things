@@ -68,8 +68,30 @@ original = {}
 
 --MP main function used to inject main.lua
 function init()
+	if missingScripts then
+		return
+	end
+
 	print("[LS2008MP v" .. MPversion .. "] init")
-	print("[LS2008MP] main.lua injector - load and init original")
+	print("[LS2008MP] main.lua injector - file check")
+	local file1 = io.open(getAppBasePath() .. "data/scripts/main.lua","r")
+   	if file1 ~= nil then
+   		io.close(file1)
+   		print("[LS2008MP] extracted main.lua found in data/scripts folder, continuing to load")
+   	else
+   		print("[LS2008MP] extracted main.lua not found in data/scripts folder, going to check scripts.zip")
+   		local file2 = io.open(getAppBasePath() .. "data/scripts.zip", "r")
+   		if file2 ~= nil then
+   			io.close(file2)
+   			print("[LS2008MP] scripts.zip found in data folder, continuing to load")
+   		else
+   			missingScripts = true
+			draw = missingScriptsDraw
+   			print("[LS2008MP] even scripts.zip is missing, check your game files")
+   			return
+   		end
+   	end
+	print("[LS2008MP] main.lua injector - load and init original main.lua")
 	source("data/scripts/main.lua")
 	init() --exec init from original main.lua
 
@@ -176,12 +198,6 @@ function init()
 		gameMenuSystem.MPsettingsMenu:addItem(Overlay:new("main_logo", "data/menu/main_logo".. g_languageSuffix .. ".png", 0.1, 0.575, 0.8, 0.4));
 	end
     gameMenuSystem.MPsettingsMenu:addItem(Overlay:new("GUIMPsettingsBackground", "data/menu/settings_background.png", 0.02, 0.08, 0.95, 0.44));
-	MPsettingsMenuxPos = 1-0.03-0.02-0.02-0.15*3
-    gameMenuSystem.MPsettingsMenu:addItem(OverlayButton:new(Overlay:new("GUIMPsettingsBackButton", "data/menu/back_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), OnserverMenuBack));
-    MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
-    gameMenuSystem.MPsettingsMenu:addItem(OverlayButton:new(Overlay:new("GUIMPsettingsSaveButton", "data/menu/save_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), MPsettingsMenuSave));
-    MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
-	gameMenuSystem.MPsettingsMenu:addItem(OverlayButton:new(Overlay:new("GUIMPclientPlayButton", "data/menu/ingame_play_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), MPclientMenuConnect)); --client only button showing up in settings
 	gameMenuSystem.MPsettingsMenu:addItem(OverlayButton:new(Overlay:new("GUIMPsettingsSelectName", "data/menu/missionmenu_background.png", 0.35, 0.442, 0.55, 0.06), MPsettingsMenuSelectName));
 	gameMenuSystem.MPsettingsMenu:addItem(OverlayButton:new(Overlay:new("GUIMPsettingsSelectIP", "data/menu/missionmenu_background.png", 0.35, 0.372, 0.55, 0.06), MPsettingsMenuSelectIP));
 	gameMenuSystem.MPsettingsMenu:addItem(OverlayButton:new(Overlay:new("GUIMPsettingsSelectPort", "data/menu/missionmenu_background.png", 0.35, 0.302, 0.55, 0.06), MPsettingsMenuSelectPort));
@@ -214,23 +230,26 @@ function MPopenClientMenu()
 	MPstate = "Client"
 	MPHeartbeat = MPClientHeartbeat
 	MPSend = MPClientSend
-	--MPsettingsMenuxPos = 1-0.03-0.02-0.02-0.15*3
-	gameMenuSystem.MPsettingsMenu:reset();
 	
-    
-	--if #gameMenuSystem.MPsettingsMenu.items == 8 then
-		--gameMenuSystem.MPsettingsMenu:addItem(OverlayButton:new(Overlay:new("GUIMPclientPlayButton", "data/menu/ingame_play_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), MPclientMenuConnect)); --client only button showing up in settings
-    --end TODO: fix this
-    --MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
+	gameMenuSystem.MPsettingsMenu:reset();
+	MPsettingsMenuxPos = 1-0.03-0.02-0.02-0.15*3
+    gameMenuSystem.MPsettingsMenu.items[7] = OverlayButton:new(Overlay:new("GUIMPsettingsBackButton", "data/menu/back_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), OnserverMenuBack)
+    MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
+    gameMenuSystem.MPsettingsMenu.items[8] = OverlayButton:new(Overlay:new("GUIMPsettingsSaveButton", "data/menu/save_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), MPsettingsMenuSave)
+    MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
+	gameMenuSystem.MPsettingsMenu.items[9] = OverlayButton:new(Overlay:new("GUIMPclientPlayButton", "data/menu/ingame_play_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), MPclientMenuConnect) --client only button showing up in settings
     gameMenuSystem.currentMenu = gameMenuSystem.MPsettingsMenu;
 end;
 function MPopenSettingsMenu()
 	print("[LS2008MP] settings selected using GUI button")
-	--MPsettingsMenuxPos = 1-0.03-0.02-0.02-0.15*2
+	
 	gameMenuSystem.MPsettingsMenu:reset();
-	--[[if #gameMenuSystem.MPsettingsMenu.items == 9 then
-		delete(gameMenuSystem.MPsettingsMenu.items,9)
-    end]] --TODO: fix this
+	MPsettingsMenuxPos = 1-0.03-0.02-0.02-0.15*3
+    gameMenuSystem.MPsettingsMenu.items[7] = OverlayButton:new(Overlay:new("nil", "data/menu/ingame_play_button".. g_languageSuffix .. ".png", 0, 0, 0, 0), MPfakeFunction)
+    MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
+    gameMenuSystem.MPsettingsMenu.items[8] = OverlayButton:new(Overlay:new("GUIMPsettingsBackButton", "data/menu/back_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), settingsMenuBack)
+    MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
+	gameMenuSystem.MPsettingsMenu.items[9] = OverlayButton:new(Overlay:new("GUIMPsettingsSaveButton", "data/menu/save_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), MPsettingsMenuSave)
     gameMenuSystem.currentMenu = gameMenuSystem.MPsettingsMenu;
 end;
 function MPsettingsMenuSave()
@@ -799,35 +818,62 @@ end
 function MPploughUpdate(self, dt)
 	original.ploughUpdate(self, dt)
 	
+	if self.MPinputEvent == "rot" then
+		self.MPinputEvent = ""
+        if self.MPeventState == "true" then
+       		self.rotationMax = true;
+    	else
+        	self.rotationMax = false
+        end
+    end
+	
 	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
     	for i=1, #g_currentMission.attachables do
       		if g_currentMission.attachables[i] == self then
-    			MPSend("bc1;ploughRot;"..MPplayerName..";"..i..";"..tostring(self.rotationMax))
+    			MPSend("bc1;impEvent;rot;"..MPplayerName..";"..i..";"..tostring(self.rotationMax))
 			end
 		end
-    end;
+    end
 end
 function MPsprayerUpdate(self, dt)
 	original.sprayerUpdate(self, dt)
 	
-	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
-    	for i=1, #g_currentMission.attachables do
-      		if g_currentMission.attachables[i] == self then
-    			MPSend("bc1;sprayerActive;"..MPplayerName..";"..i..";"..tostring(self.isActive))
-			end
-		end
-    end;
-end
-function MPmowerUpdate(self, dt)
-	original.mowerUpdate(self, dt)
+	if self.MPinputEvent == "act" then
+		self.MPinputEvent = ""
+        if self.MPeventState == "true" then
+       		self:setActive(true)
+    	else
+        	self:setActive(false)
+        end
+    end
 	
 	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
     	for i=1, #g_currentMission.attachables do
       		if g_currentMission.attachables[i] == self then
-    			MPSend("bc1;mowerActive;"..MPplayerName..";"..i..";"..tostring(self.isActive))
+    			MPSend("bc1;impEvent;act;"..MPplayerName..";"..i..";"..tostring(self.isActive))
 			end
 		end
-    end;
+    end
+end
+function MPmowerUpdate(self, dt)
+	original.mowerUpdate(self, dt)
+	
+	if self.MPinputEvent == "act" then
+		self.MPinputEvent = ""
+        if self.MPeventState == "true" then
+       		self.isActive = true
+    	else
+        	self.isActive = false
+        end
+    end
+	
+	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
+    	for i=1, #g_currentMission.attachables do
+      		if g_currentMission.attachables[i] == self then
+    			MPSend("bc1;impEvent;act;"..MPplayerName..";"..i..";"..tostring(self.isActive))
+			end
+		end
+    end
 end
 function MPtrailerAttachTrailer(self, trailer)
 	--original.trailerAttachTrailer(self, trailer) a weird thing happens here for some reason
@@ -1139,10 +1185,19 @@ end
 function MPPloughWithDrumUpdate(self, dt)
 	original.PloughWithDrumUpdate(self, dt)
 	
+	if self.MPinputEvent == "rot" then
+		self.MPinputEvent = ""
+        if self.MPeventState == "true" then
+       		self.rotationMax = true;
+    	else
+        	self.rotationMax = false
+        end
+    end
+	
 	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
     	for i=1, #g_currentMission.attachables do
       		if g_currentMission.attachables[i] == self then
-    			MPSend("bc1;ploughRot;"..MPplayerName..";"..i..";"..tostring(self.rotationMax))
+    			MPSend("bc1;impEvent;rot;"..MPplayerName..";"..i..";"..tostring(self.rotationMax))
 			end
 		end
     end
@@ -2497,11 +2552,10 @@ function MPmodifyVehicleScripts()
 	print("[LS2008MP] custom script modification finished")
 end
 
---BaseMission loadVehicle function but with support for original game
+--BaseMission loadVehicle function but with support for original game and for vehicleName thing
 function MPloadVehicle(self, filename, x, yOffset, z, yRot)
 	local xmlFile = loadXMLFile("TempConfig", filename);
     local typeName = getXMLString(xmlFile, "vehicle#type");
-    delete(xmlFile);
     local ret = nil;
     if typeName == nil then
         print("Error loadVehicle: invalid vehicle config file '"..filename.."', no type specified");
@@ -2531,11 +2585,25 @@ function MPloadVehicle(self, filename, x, yOffset, z, yRot)
             end
             if ret.setWorldPosition == nil then
             	ret.setWorldPosition = MPvehiclesetWorldPosition
-            	print("[LS2008MP] also adding setWorldPosition to vehicle " .. filename)
+            	print("[LS2008MP] adding setWorldPosition function to vehicle " .. filename)
+            end
+            if ret.vehicleName == nil then
+            	ret.vehicleName = getXMLString(xmlFile, "vehicle.name")
+            	if ret.vehicleName ~= nil then
+            		print("[LS2008MP] adding vehicleName variable using method 1 as " .. ret.vehicleName .. " to vehicle " .. filename)
+            	else
+            		ret.vehicleName = getXMLString(xmlFile, "vehicle.name.de") --trying the second vehicle name method, reading the deutsch name
+            		if ret.vehicleName ~= nil then
+            			print("[LS2008MP] adding vehicleName variable using method 2 as " .. ret.vehicleName .. " to vehicle " .. filename)
+            		else
+            			print("[LS2008MP] tried adding vehicleName variable to vehicle " .. filename .. " but failed...")
+            		end
+            	end
             end
             vehicle = nil;
         end;
     end;
+    delete(xmlFile);
     return ret;
 end
 
@@ -2547,21 +2615,10 @@ end
 
 --modified in game menu render function to fix saving and remove the save button for client
 function MPInGameMenuRender(self)
-	if self.extraOverlay ~= nil then
-        self.extraOverlay:render();
+    for i=1, table.getn(self.items) do
+    	self.items[i]:render();
     end;
-
-    if MPstate == "Client" then
-    	self.items[1] = Overlay:new("nil", "data/menu/ingame_menu_restart".. g_languageSuffix .. ".png", 0, 0, 0, 0) --replacing save with nothing
-    	for i=2, table.getn(self.items) do
-       		self.items[i]:render();
-    	end;
-    else
-    	for i=1, table.getn(self.items) do
-       		self.items[i]:render();
-    	end;
-	end
-
+    	
     if self.doSaveGame then
         self.doSaveGame = false;
         self.doSaveGamePart2 = true;
@@ -2573,6 +2630,11 @@ function MPInGameMenuRender(self)
 end
 function MPinGameMenuMode(self)
 	self.inGameMenu:reset()
+	if MPstate == "Client" then --replace save button if on client
+		gameMenuSystem.inGameMenu.items[1] = Overlay:new("MPplayerOverlay", "data/missions/hud_help_base.png", 0.012, 0.18, 0.425, 0.8);
+	else --assuming that 4th index is empty, setting it to the overlay
+		gameMenuSystem.inGameMenu.items[4] = Overlay:new("MPplayerOverlay", "data/missions/hud_help_base.png", 0.012, 0.18, 0.425, 0.8);
+	end
 	self.currentMenu = gameMenuSystem.inGameMenu
 	Player.update = MPfakeUpdate
 	--disabling update functions, this way it's a little bit less performance hogging
@@ -2592,6 +2654,12 @@ function MPplayMode(self)
 	if Cougar ~= nil then
 		MPCougarOriginalUpdate = original.CougarUpdate
 	end
+end
+
+--missing scripts.zip/main.lua draw function
+function missingScriptsDraw()
+	renderText(0.0, 0.97, 0.03, "LS2008MP v" .. MPversion .. " initialization failure");
+	renderText(0.23, 0.019+0.029+1-0.539, 0.05, "main.lua or scripts.zip is missing\n      Check your game files")
 end
 
 --MP draw function
@@ -2679,7 +2747,29 @@ function MPdraw()
 		renderText(0.35, 0.44,0.06, MPplayerName)
 		renderText(0.35, 0.37,0.06, MPip)
 		renderText(0.35, 0.30,0.06, MPport.." ")
-		
+	elseif gameMenuSystem.currentMenu == gameMenuSystem.inGameMenu then
+		-- 0.012, 0.18, 0.425, 0.8
+		local textYpos = 0.91
+		renderText(0.015, 0.94, 0.04, "LS2008MP | " .. MPstate .. " | " .. MPplayerName)
+		renderText(0.015, 0.91, 0.035, "Players:")
+		setTextBold(false);
+
+		for i=1,#MPplayerVehicle do
+			if MPplayers[i] ~= "N/A" then
+    			textYpos = textYpos - 0.03
+    			local playerText = MPplayers[i]
+    			
+    			if MPplayerVehicle[i] ~= "none" then
+    				if g_currentMission.vehicles[tonumber(MPplayerVehicle[i])].vehicleName ~= nil then	
+						playerText = MPplayers[i] .. " sitting in " .. g_currentMission.vehicles[tonumber(MPplayerVehicle[i])].vehicleName
+					else
+						playerText = MPplayers[i] .. " sitting"
+					end
+				end
+				
+				renderText(0.05, textYpos, 0.03, playerText)
+			end
+		end
 	end
 	
 	if renderConsoleBackground then
@@ -2959,42 +3049,6 @@ function handleUDPmessage(msg, msgIP, msgPort)
 			if p[2] == MPplayers[i] then
 				if MPplayerName ~= p[2] then
 					original.attachCutter(g_currentMission.vehicles[tonumber(MPplayerVehicle[i])], g_currentMission.cutters[tonumber(p[3])])
-				end
-			end
-		end
-	elseif p[1] == "ploughRot" then
-		for i=1,#MPplayers do
-			if p[2] == MPplayers[i] then
-				if MPplayerName ~= p[2] then
-					if p[4] == "true" then
-						g_currentMission.attachables[tonumber(p[3])].rotationMax = true
-					else
-						g_currentMission.attachables[tonumber(p[3])].rotationMax = false
-					end
-				end
-			end
-		end
-	elseif p[1] == "sprayerActive" then
-		for i=1,#MPplayers do
-			if p[2] == MPplayers[i] then
-				if MPplayerName ~= p[2] then
-					if p[4] == "true" then
-						g_currentMission.attachables[tonumber(p[3])].setActive(g_currentMission.attachables[tonumber(p[3])], true)
-					else
-						g_currentMission.attachables[tonumber(p[3])].setActive(g_currentMission.attachables[tonumber(p[3])], false)
-					end
-				end
-			end
-		end
-	elseif p[1] == "mowerActive" then
-		for i=1,#MPplayers do
-			if p[2] == MPplayers[i] then
-				if MPplayerName ~= p[2] then
-					if p[4] == "true" then
-						g_currentMission.attachables[tonumber(p[3])].isActive = true
-					else
-						g_currentMission.attachables[tonumber(p[3])].isActive = false
-					end
 				end
 			end
 		end

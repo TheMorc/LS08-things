@@ -577,6 +577,11 @@ function OnserverMenuBack()
 	MPsettingsMenuSelected = ""
 end;
 
+function settingsMenuBack()
+	gameMenuSystem.currentMenu = gameMenuSystem.serverMenu
+	MPsettingsMenuSelected = ""
+end;
+
 function OnserverMenuPlay()
 	gameMenuSystem.serverMenu:startSelectedGame();
 	MPsettingsMenuSelected = ""
