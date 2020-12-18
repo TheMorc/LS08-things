@@ -68,10 +68,6 @@ original = {}
 
 --MP main function used to inject main.lua
 function init()
-	if missingScripts then
-		return
-	end
-
 	print("[LS2008MP v" .. MPversion .. "] init")
 	print("[LS2008MP] main.lua injector - file check")
 	local file1 = io.open(getAppBasePath() .. "data/scripts/main.lua","r")
@@ -85,7 +81,6 @@ function init()
    			io.close(file2)
    			print("[LS2008MP] scripts.zip found in data folder, continuing to load")
    		else
-   			missingScripts = true
 			draw = missingScriptsDraw
    			print("[LS2008MP] even scripts.zip is missing, check your game files")
    			return
@@ -140,18 +135,29 @@ function init()
 		MPtimescaleUpdate = MPtimescaleUpdateOriginal --failsafe fallback to original 
 	end
 	
-	print("[LS2008MP] loading multiplayer settings")
-	require("multiplayer") --load /multiplayer.lua settings file
+	
+	print("[LS2008MP] loading multiplayer settings from multiplayer.lua")
+	if not pcall(require, "multiplayer") then --load multiplayer.lua settings file and print failed message if not found
+		print("[LS2008MP] failed to load multiplayer.lua, maybe the file is missing")
+	end  
 	if MPplayerNameRndNums then
 		MPplayerName = MPplayerName .. math.random (150)
 	end
 	print("[LS2008MP] server address: " .. MPip .. ":" .. MPport)
+	if MPplayerName == nil then
+		MPplayerName = "Player"
+		print("[LS2008MP] no player name in multiplayer.lua, setting it to Player")
+	end
+	--removing illegal characters from name
+	MPplayerName = MPplayerName:gsub('[^%w_-><+*/]', '')
 	print("[LS2008MP] player name: " .. MPplayerName) 
 	if MPchatKey == nil then
 		MPchatKey = Input.KEY_t
-		print("[LS2008MP] no chat key binding in multiplayer.lua, setting it to Input.KEY_t") 
+		print("[LS2008MP] no chat key binding in multiplayer.lua, setting it to 116 - Input.KEY_t") 
 	end
 	print("[LS2008MP] current chat key binding: " .. MPchatKey) 
+	
+	
 	print("[LS2008MP] loading i18n")
 	if MPmenuPlayerText == nil then
 		MPmenuPlayerText = "Player name"
@@ -173,10 +179,29 @@ function init()
 		MPsyncingDataText = "Syncing game data with %s\n          Please wait..."
 		print("[LS2008MP] MPsyncingDataText not found in multiplayer.lua, defaulting to \"" .. MPsyncingDataText .. "\"") 
 	end
+	if MPmenuServerButton == nil then
+		MPmenuServerButton = "Host"
+		print("[LS2008MP] MPmenuServerButton not found in multiplayer.lua, defaulting to \"" .. MPsyncingDataText .. "\"") 
+	end
+	if MPmenuClientButton == nil then
+		MPmenuClientButton = "Join"
+		print("[LS2008MP] MPmenuClientButton not found in multiplayer.lua, defaulting to \"" .. MPsyncingDataText .. "\"") 
+	end
+	if MPplayerListSitting1 == nil then
+		MPplayerListSitting1 = "%s sitting"
+		print("[LS2008MP] MPplayerListSitting1 not found in multiplayer.lua, defaulting to \"" .. MPsyncingDataText .. "\"") 
+	end
+	if MPplayerListSitting2 == nil then
+		MPplayerListSitting2 = "%s sitting in %s"
+		print("[LS2008MP] MPplayerListSitting2 not found in multiplayer.lua, defaulting to \"" .. MPsyncingDataText .. "\"") 
+	end
+	
+	
 	print("[LS2008MP] loading additional MP scripts") 
 	source("data/scripts/multiplayer/serverMenu.lua")
 	gameMenuSystem.serverMenu = serverMenu:new(gameMenuSystem.bgOverlay)
 	source("data/scripts/multiplayer/serverLoading.lua")
+	
 	
 	print("[LS2008MP] adding GUI and HUD") 
 	--chat overlays
@@ -202,14 +227,15 @@ function init()
 	gameMenuSystem.MPsettingsMenu:addItem(OverlayButton:new(Overlay:new("GUIMPsettingsSelectIP", "data/menu/missionmenu_background.png", 0.35, 0.372, 0.55, 0.06), MPsettingsMenuSelectIP));
 	gameMenuSystem.MPsettingsMenu:addItem(OverlayButton:new(Overlay:new("GUIMPsettingsSelectPort", "data/menu/missionmenu_background.png", 0.35, 0.302, 0.55, 0.06), MPsettingsMenuSelectPort));
 
-	consoleBackground = Overlay:new("GUIMPsettingsBackground", "data/menu/settings_background.png", 0, 0.47, 1, 0.53);
+	consoleBackground = Overlay:new("GUIMPsettingsBackground", "data/menu/settings_background.png", 0, 0.47, 1, 0.53); 
+	
 	
 	print("[LS2008MP] creating chatlog " .. getUserProfileAppPath() .. "chatlogs/" .. MPchatlogFilename)
-	--creating chat log folder
 	createFolder(getUserProfileAppPath() .. "chatlogs/")
 	MPchatlogFile = io.open(getUserProfileAppPath() .. "chatlogs/" .. MPchatlogFilename, "a")
-	MPchatlogFile:write("[LS2008MP v" .. MPversion .. "] Chat log file created on " .. os.date("%d.%m.%Y %H:%M:%S") .. " | Player: " .. MPplayerName .. " | IP: " .. MPip .. ":" .. MPport)
+	MPchatlogFile:write("[LS2008MP v" .. MPversion .. "] Chat log file created on " .. os.date("%d.%m.%Y %H:%M:%S") .. " | Player: " .. MPplayerName .. " | IP: " .. MPip .. ":" .. MPport .. "\n")
 	MPchatlogFile:close()
+	
 	
 	print("[LS2008MP v" .. MPversion .. "] initialized successfully, hooray!") 	
 	MPloaded = true
@@ -2730,8 +2756,8 @@ function MPdraw()
 	if gameMenuSystem.currentMenu == gameMenuSystem.mainMenu then
 		if MPmainMenuButtonsText == true then
 			setTextBold(true);
-			renderText(0.225, 0.5, 0.06, "Client");
-			renderText(0.218, 0.43, 0.06, "Server");
+			renderText(0.225, 0.5, 0.06, MPmenuClientButton);
+			renderText(0.218, 0.43, 0.06, MPmenuServerButton);
 			setTextBold(false);
 		end
 	elseif gameMenuSystem.currentMenu == gameMenuSystem.MPsettingsMenu then
@@ -2761,9 +2787,9 @@ function MPdraw()
     			
     			if MPplayerVehicle[i] ~= "none" then
     				if g_currentMission.vehicles[tonumber(MPplayerVehicle[i])].vehicleName ~= nil then	
-						playerText = MPplayers[i] .. " sitting in " .. g_currentMission.vehicles[tonumber(MPplayerVehicle[i])].vehicleName
+						playerText = string.format(MPplayerListSitting2, MPplayers[i], g_currentMission.vehicles[tonumber(MPplayerVehicle[i])].vehicleName)
 					else
-						playerText = MPplayers[i] .. " sitting"
+						playerText = string.format(MPplayerListSitting1, MPplayers[i])
 					end
 				end
 				
@@ -2775,7 +2801,14 @@ function MPdraw()
 	if renderConsoleBackground then
 		consoleBackground:render()
 	end
-		
+	
+	if MPloaded then
+		return --just return and do nothing
+	end --otherwise render error message
+	setTextColor(0,0,0,1)
+	renderText(0.13+0.003, 0.019+0.029+1-0.539-0.003, 0.05, "An error has occured while loading LS2008MP\n       Please send output.log to Morc")
+	setTextColor(1,1,1,1)
+	renderText(0.13, 0.019+0.029+1-0.539, 0.05, "An error has occured while loading LS2008MP\n       Please send output.log to Morc")
 end
 
 --MP keyEvent function

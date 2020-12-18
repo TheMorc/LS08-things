@@ -32,9 +32,13 @@ MPmainMenuButtonsText = false
 --MPserverButtonPath = "data/missions/hud_env_base.png"
 --MPmainMenuButtonsText = true
 
---LS2008 translatable strings
+--LS2008MP translatable strings
 MPmenuPlayerText = "Player name"
 MPmenuIPText = "  IP address"
 MPmenuPortText = "Port number"
 MPmenuWaitText = "Wait.."
 MPsyncingDataText = "Syncing game data with %s\n          Please wait..."
+MPmenuClientButton = "Join"
+MPmenuServerButton = "Host"
+MPplayerListSitting1 = "%s sitting" --used for vehicles that for some reason lack the <name> xml element
+MPplayerListSitting2 = "%s sitting in %s"

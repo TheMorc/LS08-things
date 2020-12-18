@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="iso-8859-1" standalone="no" ?>
+<startup>
+  <cmdline>FarmingSimulator2008Game.exe -script data/scripts/mainMP.lua -name FarmingSimulator2008MP</cmdline>
+</startup>
