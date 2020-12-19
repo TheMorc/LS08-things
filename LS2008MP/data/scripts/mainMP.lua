@@ -205,8 +205,11 @@ function init()
 	os.execute(dircmd .. " /b > .MPfileList")
 	for f in io.lines(".MPfileList") do
         local script = f:gsub(".lua", "")
-        if not pcall(require, "data/scripts/multiplayer/scripts/" .. script) then
-			print("[LS2008MP] ERROR: failed to load custom vehicle script " .. script)
+        if pcall(function() require("data/scripts/multiplayer/scripts/" .. script) end) then
+        	print("[LS2008MP] added vehicle/custom script " .. script)
+        	MPcustomScripts[#MPcustomScripts+1] = script
+        else
+			print("[LS2008MP] ERROR: failed to load vehicle/custom script " .. script)
 		end
   	end
   	
@@ -520,7 +523,6 @@ function MPgetVehicleInRange(self, threshold, vehicles, referenceId)
     return nearestVehicle;
 end
 
-
 function MPsyncAttachImplement(vehicle, object, index)
 	original.attachImplement(vehicle, object, index)
 	
@@ -548,19 +550,6 @@ function MPsyncDetachTrailer(self)
 	MPSend("bc1;detachTrailer;"..MPplayerName)	
 	
 	return original.handleDetachTrailerEvent(self)
-end
-function MPsyncAttachCutter(self, cutter)
-	original.attachCutter(self, cutter)
-	for i=1, #g_currentMission.cutters do
-      	if g_currentMission.cutters[i] == cutter then
-    		MPSend("bc1;attachCutter;"..MPplayerName..";"..i)
-        end 	
-    end
-end
-function MPsyncDetachCurrentCutter(self)
-	MPSend("bc1;detachCurrentCutter;"..MPplayerName)	
-	
-	original.detachCurrentCutter(self)
 end
 function MPvehicleUpdate(self, dt, isActive)
 	MPvehicleOriginalUpdate(self, dt, isActive)
@@ -692,156 +681,6 @@ function MPvehicleUpdate(self, dt, isActive)
 		--end
 	end
 end
-function MPcombineUpdate(self, dt, isActive)
-	original.combineUpdate(self, dt, isActive)
-	
-	if self.MPsitting then
-		
-		if self.MPinputEvent == "threshing" then --used on combines
-			self.MPinputEvent = ""
-			if self.grainTankFillLevel < self.grainTankCapacity then
-                if self.attachedCutter ~= nil then
-                    if self.MPeventState == "true" then
-                        self:startThreshing();
-                    else
-                        self:stopThreshing();
-                    end;
-                end;
-            end;
-        elseif self.MPinputEvent == "lowerCutter" then
-			self.MPinputEvent = ""
-            if self.attachedCutter ~= nil then
-            	if self.MPeventState == "true" then
-                	self.cutterAttacherJointMoveDown = true;
-                else
-                	self.cutterAttacherJointMoveDown = false
-                end
-            end;
-		elseif self.MPinputEvent == "pipe" then
-			self.MPinputEvent = ""
-			if self.MPeventState == "true" then
-				self.pipeOpening = true;
-			else
-				self.pipeOpening = false
-			end
-		end
-		
-		--isEntered part of the combine code that needed to be stolen otherwise it wouldn't update just like the bit of code above
-		if self.attachedCutter ~= nil then
-		
-			--stop on full
-			if self.grainTankFillLevel == self.grainTankCapacity then
-        	    self.attachedCutter:onStopReel();
-        	end
-		
-			--lowering
-			jointDesc = self.cutterAttacherJoint;
-        	if jointDesc.jointIndex ~= 0 then
-            if jointDesc.rotationNode ~= nil then
-                local x, y, z = getRotation(jointDesc.rotationNode);
-                local rot = {x,y,z};
-                local newRot = Utils.getMovedLimitedValues(rot, jointDesc.maxRot, jointDesc.minRot, 3, jointDesc.moveTime, dt, not self.cutterAttacherJointMoveDown);
-                setRotation(jointDesc.rotationNode, unpack(newRot));
-                for i=1, 3 do
-                    if math.abs(newRot[i] - rot[i]) > 0.001 then
-                        jointFrameInvalid = true;
-                    end;
-                end;
-            end;
-            if jointDesc.rotationNode2 ~= nil then
-                local x, y, z = getRotation(jointDesc.rotationNode2);
-                local rot = {x,y,z};
-                local newRot = Utils.getMovedLimitedValues(rot, jointDesc.maxRot2, jointDesc.minRot2, 3, jointDesc.moveTime, dt, not self.cutterAttacherJointMoveDown);
-                setRotation(jointDesc.rotationNode2, unpack(newRot));
-                for i=1, 3 do
-                    if math.abs(newRot[i] - rot[i]) > 0.001 then
-                        jointFrameInvalid = true;
-                    end;
-                end;
-            end;
-            if jointFrameInvalid then
-                setJointFrame(jointDesc.jointIndex, 0, jointDesc.jointTransform);
-            end;
-        end;
-
-			--calculate add to tank
-        	if self.chopperActivated and self.attachedCutter.reelStarted and self.attachedCutter.lastArea > 0 then
-            chopperEmitState = true;
-
-            local literPerPixel = 8000/1200 / 6 / (2*2);
-
-            literPerPixel = literPerPixel*1.5;
-
-            self.grainTankFillLevel = self.grainTankFillLevel+self.attachedCutter.lastArea*literPerPixel*self.threshingScale;
-            self:setGrainTankFillLevel(self.grainTankFillLevel);
-        	end;
-			
-			--rotate chopper
-			local chopperBlindRotationSpeed = 0.001;
-        	local minRotX = -83*3.1415/180.0;
-        	if self.chopperBlind ~= nil then
-            local x,y,z = getRotation(self.chopperBlind);
-            if self.chopperActivated then
-                x = x-dt*chopperBlindRotationSpeed;
-                if x < minRotX then
-                    x = minRotX;
-                end;
-            else
-                x = x+dt*chopperBlindRotationSpeed;
-                if x > 0.0 then
-                    x = 0.0;
-                end;
-            end;
-            setRotation(self.chopperBlind, x, y, z);
-        end;
-
-			--open close pipe
-        	local pipeRotationSpeed = 0.0006;
-        	local pipeMinRotY = -105*3.1415/180.0;
-        	local pipeMaxRotX = 10*3.1415/180.0;
-        	local pipeXRotationSpeed = 0.00006;
-        	if self.pipe ~= nil then
-            local x,y,z = getRotation(self.pipe);
-            if self.pipeOpening then
-                y = y-dt*pipeRotationSpeed;
-                if y < pipeMinRotY then
-                    y = pipeMinRotY;
-                end;
-                x = x+dt*pipeXRotationSpeed;
-                if x > pipeMaxRotX then
-                    x = pipeMaxRotX;
-                end;
-            else
-                y = y+dt*pipeRotationSpeed;
-                if y > 0.0 then
-                    y = 0.0;
-                end;
-                x = x-dt*pipeXRotationSpeed;
-                if x < 0.0 then
-                    x = 0.0;
-                end;
-            end;
-            setRotation(self.pipe, x, y, z);
-            self.pipeOpen = (math.abs(pipeMinRotY-y) < 0.01);
-        end;
-		end
-	end
-	
-	if self.isEntered then
-		if InputBinding.hasEvent(InputBinding.LOWER_IMPLEMENT) then
-           	if self.attachedCutter ~= nil then
-       			MPSend("bc1;vehEvent;lowerCutter;"..MPplayerName..";"..self.MPindex..";"..tostring(self.cutterAttacherJointMoveDown))
-			end
-		elseif InputBinding.hasEvent(InputBinding.ACTIVATE_THRESHING) then
-          	if self.attachedCutter ~= nil then
-        		MPSend("bc1;vehEvent;threshing;"..MPplayerName..";"..self.MPindex..";"..tostring(self.attachedCutter:isReelStarted()))
-			end
-        elseif InputBinding.hasEvent(InputBinding.EMPTY_GRAIN) then
-        	MPSend("bc1;vehEvent;pipe;"..MPplayerName..";"..self.MPindex..";"..tostring(self.pipeOpening))
-		end
-	end
-	
-end
 function MPplayerUpdate(dt)
 	original.playerUpdate(dt)
 	
@@ -849,100 +688,6 @@ function MPplayerUpdate(dt)
 	--because guess who forgot to update it..
 	local xt, yt, zt = getTranslation(Player.playerName);
     Player.lastYPos = yt;
-end
-function MPploughUpdate(self, dt)
-	original.ploughUpdate(self, dt)
-	
-	if self.MPinputEvent == "rot" then
-		self.MPinputEvent = ""
-        if self.MPeventState == "true" then
-       		self.rotationMax = true;
-    	else
-        	self.rotationMax = false
-        end
-    end
-	
-	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
-    	for i=1, #g_currentMission.attachables do
-      		if g_currentMission.attachables[i] == self then
-    			MPSend("bc1;impEvent;rot;"..MPplayerName..";"..i..";"..tostring(self.rotationMax))
-			end
-		end
-    end
-end
-function MPsprayerUpdate(self, dt)
-	original.sprayerUpdate(self, dt)
-	
-	if self.MPinputEvent == "act" then
-		self.MPinputEvent = ""
-        if self.MPeventState == "true" then
-       		self:setActive(true)
-    	else
-        	self:setActive(false)
-        end
-    end
-	
-	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
-    	for i=1, #g_currentMission.attachables do
-      		if g_currentMission.attachables[i] == self then
-    			MPSend("bc1;impEvent;act;"..MPplayerName..";"..i..";"..tostring(self.isActive))
-			end
-		end
-    end
-end
-function MPmowerUpdate(self, dt)
-	original.mowerUpdate(self, dt)
-	
-	if self.MPinputEvent == "act" then
-		self.MPinputEvent = ""
-        if self.MPeventState == "true" then
-       		self.isActive = true
-    	else
-        	self.isActive = false
-        end
-    end
-	
-	if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
-    	for i=1, #g_currentMission.attachables do
-      		if g_currentMission.attachables[i] == self then
-    			MPSend("bc1;impEvent;act;"..MPplayerName..";"..i..";"..tostring(self.isActive))
-			end
-		end
-    end
-end
-function MPtrailerAttachTrailer(self, trailer)
-	--original.trailerAttachTrailer(self, trailer) a weird thing happens here for some reason
-	--so it gets executed from handleUDPmessage
-	
-	for i=1, #g_currentMission.trailers do
-		for j=1, #g_currentMission.trailers do
-      		if g_currentMission.trailers[i] == trailer and g_currentMission.trailers[j] == self then
-    			MPSend("bc1;trailerAttachTrailer;"..j..";"..i)
-        	end 	
-        end
-    end
-end
-function MPtoggleTipState(self)
-	original.toggleTipState(self)
-    for i=1, #g_currentMission.trailers do
-      	if g_currentMission.trailers[i] == self then
-    		MPSend("bc1;toggleTipState;"..MPplayerName..";"..i)
-		end
-	end
-end
-function MPonStartTip(self)
-	original.onStartTip(self)
-	g_currentMission.allowSteerableMoving = true;
-    g_currentMission.fixedCamera = false;
-end
-function MPtrailerhandleDetachTrailerEvent(self)
-	for i=1, #g_currentMission.trailers do
-      	if g_currentMission.trailers[i] == self then
-    		MPSend("bc1;trailerDetachTrailer;"..i)
-        end 
-    end
-    
-	return original.trailerhandleDetachTrailerEvent(self)
 end
 
 --OriginalUpdate functions for scripts that tend to mess mouse and other stuff in inGameMenu
@@ -1157,10 +902,8 @@ end
 
 --MP modify vehicle scripts, called from MPupdate
 function MPmodifyVehicleScripts()
-	local modifiedVeh = "[LS2008MP] modified vehicle script %s"
-	local modifiedCus = "[LS2008MP] modified custom script %s"
-	local noVehScript = "[LS2008MP] vehicle script %s not found (This might not be a problem)"
-	local noCusScript = "[LS2008MP] custom script %s not found (This might not be a problem)"
+	local modifiedVeh = "[LS2008MP] modified vehicle/custom script %s"
+	local noVehScript = "[LS2008MP] vehicle/custom script %s not found (This might not be a problem)"
 	
 	print("[LS2008MP] postMission00load script update, do not panic unless necessary (just ask Morc if you're worried)")
 
@@ -1187,70 +930,18 @@ function MPmodifyVehicleScripts()
 	else
 		print(string.format(noVehScript, "Vehicle"))
 	end
-	
-	if Combine ~= nil then
-		original.attachCutter = Combine.attachCutter
-		original.detachCurrentCutter = Combine.detachCurrentCutter
-		original.combineUpdate = Combine.update
-		Combine.attachCutter = MPsyncAttachCutter
-		Combine.detachCurrentCutter = MPsyncDetachCurrentCutter
-		Combine.update = MPcombineUpdate
-		print(string.format(modifiedVeh, "Combine"))
-	else
-		print(string.format(noVehScript, "Combine"))
-	end
-
-	if Plough ~= nil then
-		original.ploughUpdate = Plough.update
-		Plough.update = MPploughUpdate
-		print(string.format(modifiedVeh, "Plough"))
-	else
-		print(string.format(noVehScript, "Plough"))
-	end
-	
-	if Sprayer ~= nil then
-		original.sprayerUpdate = Sprayer.update
-		Sprayer.update = MPsprayerUpdate
-		print(string.format(modifiedVeh, "Sprayer"))
-	else
-		print(string.format(noVehScript, "Sprayer"))
-	end
-	
-	if Mower ~= nil then
-		original.mowerUpdate = Mower.update
-		Mower.update = MPmowerUpdate
-		print(string.format(modifiedVeh, "Mower"))
-	else
-		print(string.format(noVehScript, "Mower"))
-	end
-	
-	if Trailer ~= nil then
-		original.trailerAttachTrailer = Trailer.attachTrailer
-		original.toggleTipState = Trailer.toggleTipState
-		original.onStartTip = Trailer.onStartTip
-		original.trailerhandleDetachTrailerEvent = Trailer.handleDetachTrailerEvent
-		Trailer.attachTrailer = MPtrailerAttachTrailer
-		Trailer.toggleTipState = MPtoggleTipState
-		Trailer.onStartTip = MPonStartTip
-		Trailer.handleDetachTrailerEvent = MPtrailerhandleDetachTrailerEvent
-		print(string.format(modifiedVeh, "Trailer"))
-	else
-		print(string.format(noVehScript, "Trailer"))
-	end
-	print("[LS2008MP] game script modification finished")
+	print("[LS2008MP] main script modification finished")
 	
 	--custom script modification updater
 	for i,script in ipairs(MPcustomScripts) do
 		local customScript = "MP"..script.."ScriptUpdate()"
-		loadstring(customScript)();
-		if scriptState then
-			print(string.format(modifiedCus, script))
+		if pcall(function () loadstring(customScript)() end) then
+			print(string.format(modifiedVeh, script))
 		else
-			print(string.format(noCusScript, script))
+			print(string.format(noVehScript, script))
 		end
-		scriptState = false
 	end
-	print("[LS2008MP] custom script modification finished")
+	print("[LS2008MP] vehicle/custom script modification finished")
 end
 
 --BaseMission loadVehicle function but with support for original game and for vehicleName thing

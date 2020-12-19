@@ -1,11 +1,10 @@
-print("[LS2008MP] adding Lexion400AP")
-MPcustomScripts[#MPcustomScripts+1] = "Lexion400AP"
+--Lexion400AP (mod script) MP script
+--
 function MPLexion400APScriptUpdate()
 	original.Lexion400APUpdate = Lexion400AP.update
 	original.Lexion400APkeyEvent = Lexion400AP.keyEvent
 	Lexion400AP.keyEvent = MPLexion400APkeyEvent --using the same keyevent update as for CombineAP2
 	Lexion400AP.update = MPLexion400APUpdate
-	scriptState = true
 end
 
 

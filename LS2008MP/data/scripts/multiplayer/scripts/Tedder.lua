@@ -1,11 +1,10 @@
-print("[LS2008MP] adding Tedder")
-MPcustomScripts[#MPcustomScripts+1] = "Tedder"
+--Tedder (mod script) MP script
+--
 function MPTedderScriptUpdate()
 	original.TedderUpdate = Tedder.update
 	original.TedderkeyEvent = Tedder.keyEvent
 	Tedder.update = MPTedderUpdate
 	Tedder.keyEvent = MPTedderkeyEvent
-	scriptState = true
 end
 
 

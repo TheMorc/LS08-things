@@ -1,9 +1,8 @@
-print("[LS2008MP] adding ClassJaguarAP")
-MPcustomScripts[#MPcustomScripts+1] = "ClassJaguarAP"
+--ClassJaguarAP (mod script) MP script
+--
 function MPClassJaguarAPScriptUpdate()
 	original.ClaasJaguarAPkeyEvent = ClaasJaguarAP.keyEvent
 	ClaasJaguarAP.keyEvent = MPClaasJaguarAPkeyEvent --using the same keyevent update as for CombineAP2
-	scriptState = true
 end
 
 function MPClaasJaguarAPkeyEvent(self, unicode, sym, modifier, isDown)

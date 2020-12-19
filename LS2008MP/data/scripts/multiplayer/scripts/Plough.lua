@@ -1,12 +1,13 @@
---PloughWithDrum (mod script) MP script
+--Plough (original game script) MP script
 --
-function MPPloughWithDrumScriptUpdate()
-	original.PloughWithDrumUpdate = PloughWithDrum.update
-	PloughWithDrum.update = MPPloughWithDrumUpdate
+function MPPloughScriptUpdate()
+	original.ploughUpdate = Plough.update
+	Plough.update = MPploughUpdate
 end
 
-function MPPloughWithDrumUpdate(self, dt)
-	original.PloughWithDrumUpdate(self, dt)
+
+function MPploughUpdate(self, dt)
+	original.ploughUpdate(self, dt)
 	
 	if self.MPinputEvent == "rot" then
 		self.MPinputEvent = ""
@@ -25,4 +26,3 @@ function MPPloughWithDrumUpdate(self, dt)
 		end
     end
 end
-

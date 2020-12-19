@@ -1,37 +1,29 @@
---Combine2 (mod script) MP script
+--Combine (original game script) MP script
 --
-function MPCombine2ScriptUpdate()
-	original.ClaasJaguarAPkeyEvent = ClaasJaguarAP.keyEvent
-	ClaasJaguarAP.keyEvent = MPClaasJaguarAPkeyEvent --using the same keyevent update as for CombineAP2
+function MPCombineScriptUpdate()
+	original.attachCutter = Combine.attachCutter
+	original.detachCurrentCutter = Combine.detachCurrentCutter
+	original.combineUpdate = Combine.update
+	Combine.attachCutter = MPsyncAttachCutter
+	Combine.detachCurrentCutter = MPsyncDetachCurrentCutter
+	Combine.update = MPcombineUpdate
 end
 
-function MPCombine2keyEvent(self, unicode, sym, modifier, isDown)
-	original.Combine2keyEvent(self, unicode, sym, modifier, isDown)
-	if self.isEntered then
-		if isDown then
-			if sym==self.keys.stroh then
-				MPSend("bc1;vehEvent;hayOn;"..MPplayerName..";"..self.MPindex..";"..tostring(self.hayOn))
-			elseif sym==self.keys.pipe then
-        		MPSend("bc1;vehEvent;fPipeOpen;"..MPplayerName..";"..self.MPindex..";"..tostring(self.fPipeOpen))
-			end;
-		end
-    end          
-end
-function MPCombine2attachCutter(self, cutter)
-	original.Combine2attachCutter(self, cutter)
+function MPsyncAttachCutter(self, cutter)
+	original.attachCutter(self, cutter)
 	for i=1, #g_currentMission.cutters do
       	if g_currentMission.cutters[i] == cutter then
     		MPSend("bc1;attachCutter;"..MPplayerName..";"..i)
         end 	
     end
 end
-function MPCombine2detachCurrentCutter(self)
+function MPsyncDetachCurrentCutter(self)
 	MPSend("bc1;detachCurrentCutter;"..MPplayerName)	
 	
-	original.Combine2detachCurrentCutter(self)
+	original.detachCurrentCutter(self)
 end
-function MPCombine2Update(self, dt, isActive)
-	original.Combine2Update(self, dt, isActive)
+function MPcombineUpdate(self, dt, isActive)
+	original.combineUpdate(self, dt, isActive)
 	
 	if self.MPsitting then
 		
@@ -62,26 +54,18 @@ function MPCombine2Update(self, dt, isActive)
 			else
 				self.pipeOpening = false
 			end
-		elseif self.MPinputEvent == "fPipeOpen" then
-			self.MPinputEvent = ""
-			if self.MPeventState == "true" then
-				self.fPipeOpen = true;
-			else
-				self.fPipeOpen = false
-			end
-		elseif self.MPinputEvent == "hayOn" then
-			self.MPinputEvent = ""
-			if self.MPeventState == "true" then
-				self.hayOn = true;
-			else
-				self.hayOn = false
-			end
 		end
 		
 		--isEntered part of the combine code that needed to be stolen otherwise it wouldn't update just like the bit of code above
 		if self.attachedCutter ~= nil then
 		
-			local jointDesc = self.cutterAttacherJoint;
+			--stop on full
+			if self.grainTankFillLevel == self.grainTankCapacity then
+        	    self.attachedCutter:onStopReel();
+        	end
+		
+			--lowering
+			jointDesc = self.cutterAttacherJoint;
         	if jointDesc.jointIndex ~= 0 then
             if jointDesc.rotationNode ~= nil then
                 local x, y, z = getRotation(jointDesc.rotationNode);
@@ -108,9 +92,22 @@ function MPCombine2Update(self, dt, isActive)
             if jointFrameInvalid then
                 setJointFrame(jointDesc.jointIndex, 0, jointDesc.jointTransform);
             end;
+        end;
+
+			--calculate add to tank
+        	if self.chopperActivated and self.attachedCutter.reelStarted and self.attachedCutter.lastArea > 0 then
+            chopperEmitState = true;
+
+            local literPerPixel = 8000/1200 / 6 / (2*2);
+
+            literPerPixel = literPerPixel*1.5;
+
+            self.grainTankFillLevel = self.grainTankFillLevel+self.attachedCutter.lastArea*literPerPixel*self.threshingScale;
+            self:setGrainTankFillLevel(self.grainTankFillLevel);
         	end;
-		
-        	local chopperBlindRotationSpeed = 0.001;
+			
+			--rotate chopper
+			local chopperBlindRotationSpeed = 0.001;
         	local minRotX = -83*3.1415/180.0;
         	if self.chopperBlind ~= nil then
             local x,y,z = getRotation(self.chopperBlind);
@@ -126,8 +123,37 @@ function MPCombine2Update(self, dt, isActive)
                 end;
             end;
             setRotation(self.chopperBlind, x, y, z);
-        	end;
+        end;
 
+			--open close pipe
+        	local pipeRotationSpeed = 0.0006;
+        	local pipeMinRotY = -105*3.1415/180.0;
+        	local pipeMaxRotX = 10*3.1415/180.0;
+        	local pipeXRotationSpeed = 0.00006;
+        	if self.pipe ~= nil then
+            local x,y,z = getRotation(self.pipe);
+            if self.pipeOpening then
+                y = y-dt*pipeRotationSpeed;
+                if y < pipeMinRotY then
+                    y = pipeMinRotY;
+                end;
+                x = x+dt*pipeXRotationSpeed;
+                if x > pipeMaxRotX then
+                    x = pipeMaxRotX;
+                end;
+            else
+                y = y+dt*pipeRotationSpeed;
+                if y > 0.0 then
+                    y = 0.0;
+                end;
+                x = x-dt*pipeXRotationSpeed;
+                if x < 0.0 then
+                    x = 0.0;
+                end;
+            end;
+            setRotation(self.pipe, x, y, z);
+            self.pipeOpen = (math.abs(pipeMinRotY-y) < 0.01);
+        end;
 		end
 	end
 	
@@ -138,10 +164,11 @@ function MPCombine2Update(self, dt, isActive)
 			end
 		elseif InputBinding.hasEvent(InputBinding.ACTIVATE_THRESHING) then
           	if self.attachedCutter ~= nil then
-				MPSend("bc1;vehEvent;threshing;"..MPplayerName..";"..self.MPindex..";"..tostring(self.attachedCutter:isReelStarted()))
+        		MPSend("bc1;vehEvent;threshing;"..MPplayerName..";"..self.MPindex..";"..tostring(self.attachedCutter:isReelStarted()))
 			end
         elseif InputBinding.hasEvent(InputBinding.EMPTY_GRAIN) then
         	MPSend("bc1;vehEvent;pipe;"..MPplayerName..";"..self.MPindex..";"..tostring(self.pipeOpening))
 		end
 	end
+	
 end
