@@ -349,11 +349,7 @@ function MPCougarUpdate(self, dt)
 	if self.isEntered then
 		if self.dummyVar then
 			if InputBinding.hasEvent(InputBinding.IMPLEMENT_EXTRA) then
-				for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;activeMower;"..MPplayerName..";"..i..";"..tostring(self.activeMower))
-					end
-				end
+				MPSend("bc1;vehEvent;activeMower;"..MPplayerName..";"..self.MPindex..";"..tostring(self.activeMower))
 			end;
 		end;
 	end
@@ -365,47 +361,19 @@ function MPCougarkeyEvent(self, unicode, sym, modifier, isDown)
 		local xtemp3, ytemp3, ztemp3 = getRotation(self.rotationPart.node);
     	if isDown then
     		if sym == Input.KEY_x and self.lastSpeed < 0.0001 and not self.activeMower and ztemp3 > -1.1345 then
-				for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;transport;"..MPplayerName..";"..i..";"..tostring(self.transport))
-					end
-				end
+				MPSend("bc1;vehEvent;transport;"..MPplayerName..";"..self.MPindex..";"..tostring(self.transport))
 			elseif sym == Input.KEY_space and self.activeMower then
-    		    for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;globalDown;"..MPplayerName..";"..i..";"..tostring(self.globalDown))
-					end
-				end
+    		    MPSend("bc1;vehEvent;globalDown;"..MPplayerName..";"..self.MPindex..";"..tostring(self.globalDown))
 			elseif sym == Input.KEY_n and self.activeMower then
-    		    for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;BackMowerRight;"..MPplayerName..";"..i..";"..tostring(self.BackMowerRight))
-					end
-				end
+    		    MPSend("bc1;vehEvent;BackMowerRight;"..MPplayerName..";"..self.MPindex..";"..tostring(self.BackMowerRight))
 			elseif sym == Input.KEY_m and self.activeMower then
-    		    for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;BackMowerLeft;"..MPplayerName..";"..i..";"..tostring(self.BackMowerLeft))
-					end
-				end
+    		    MPSend("bc1;vehEvent;BackMowerLeft;"..MPplayerName..";"..self.MPindex..";"..tostring(self.BackMowerLeft))
 			elseif sym == Input.KEY_j and self.activeMower then
-    		    for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;MiddleMowerLeft;"..MPplayerName..";"..i..";"..tostring(self.MiddleMowerLeft))
-					end
-				end
+    		    MPSend("bc1;vehEvent;MiddleMowerLeft;"..MPplayerName..";"..self.MPindex..";"..tostring(self.MiddleMowerLeft))
 			elseif sym == Input.KEY_l and self.activeMower then
-    	 	   for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;MiddleMowerRight;"..MPplayerName..";"..i..";"..tostring(self.MiddleMowerRight))
-					end
-				end
+    	 	  	MPSend("bc1;vehEvent;MiddleMowerRight;"..MPplayerName..";"..self.MPindex..";"..tostring(self.MiddleMowerRight))
 			elseif sym == Input.KEY_k and self.activeMower then
-    		    for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;FrontMower;"..MPplayerName..";"..i..";"..tostring(self.FrontMower))
-					end
-				end
+    			MPSend("bc1;vehEvent;FrontMower;"..MPplayerName..";"..self.MPindex..";"..tostring(self.FrontMower))
 			end;
 		end
 	end

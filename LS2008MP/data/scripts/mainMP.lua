@@ -5,7 +5,7 @@
 -- @author  Richard Gráčik (mailto:r.gracik@gmail.com)
 -- @date  10.11.2020 - 19.12.2020
 
-MPloaded = false
+MPloaded = false --used to show a message if something shits
 MPversion = "0.11 luasockets"
 
 --LuaSocket stuff
@@ -63,7 +63,7 @@ MPnewPlayerName = ""
 isOriginalGame = false
 isModAgri = false
 
-MPcustomScripts = {}
+MPcustomScripts = {} --custom script thing for custom scripts obviously
 
 --array with original functions from game
 original = {}
@@ -253,7 +253,7 @@ function init()
 	
 	print("[LS2008MP v" .. MPversion .. "] initialized successfully, hooray!") 	
 	MPloaded = true
-	setCaption("LS2008MP v" .. MPversion)
+	setCaption("LS2008MP v" .. MPversion .. " | MainMenu | ".. MPplayerName)
 end
 
 --MP GUI open and button functions
@@ -386,6 +386,7 @@ function MPonEnterVehicle(self, vehicle)
 		for i=1, table.getn(g_currentMission.vehicles) do
     	    if g_currentMission.vehicles[i] == g_currentMission.currentVehicle then
     	    	MPSend("bc1;enteredVehicle;"..MPplayerName..";"..i)
+    	    	vehicle.MPindex = i
    			end
     	end
     end
@@ -678,25 +679,13 @@ function MPvehicleUpdate(self, dt, isActive)
             		if self.selectedImplement ~= 0 then
         				LIimplement = self.attachedImplements[self.selectedImplement];
         				LIjointDesc = self.attacherJoints[LIimplement.jointDescIndex];
-        				for i=1, table.getn(g_currentMission.vehicles) do
-        					if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        						MPSend("bc1;vehEvent;lower;"..MPplayerName..";"..i..";"..tostring(LIjointDesc.moveDown))
-							end
-						end
+        				MPSend("bc1;vehEvent;lower;"..MPplayerName..";"..self.MPindex..";"..tostring(LIjointDesc.moveDown))
     				end;
         		elseif InputBinding.hasEvent(InputBinding.TOGGLE_LIGHTS) then
-        	    	for i=1, table.getn(g_currentMission.vehicles) do
-        				if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        					MPSend("bc1;vehEvent;lights;"..MPplayerName..";"..i..";"..tostring(self.lightsActive))
-						end
-					end
+        	    	MPSend("bc1;vehEvent;lights;"..MPplayerName..";"..i..";"..tostring(self.lightsActive))
 				elseif InputBinding.hasEvent(InputBinding.SWITCH_IMPLEMENT) then
-					for i=1, table.getn(g_currentMission.vehicles) do
-        				if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        					if table.getn(self.attachedImplements) > 0 then
-        						MPSend("bc1;vehEvent;switchImplement;"..MPplayerName..";"..i..";"..tostring(self.selectedImplement))
-							end
-						end
+					if table.getn(self.attachedImplements) > 0 then
+        				MPSend("bc1;vehEvent;switchImplement;"..MPplayerName..";"..self.MPindex..";"..tostring(self.selectedImplement))
 					end
 				end
 		--	end
@@ -840,27 +829,15 @@ function MPcombineUpdate(self, dt, isActive)
 	
 	if self.isEntered then
 		if InputBinding.hasEvent(InputBinding.LOWER_IMPLEMENT) then
-           	for i=1, table.getn(g_currentMission.vehicles) do
-       			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-       				if self.attachedCutter ~= nil then
-       					MPSend("bc1;vehEvent;lowerCutter;"..MPplayerName..";"..i..";"..tostring(self.cutterAttacherJointMoveDown))
-					end
-				end
+           	if self.attachedCutter ~= nil then
+       			MPSend("bc1;vehEvent;lowerCutter;"..MPplayerName..";"..self.MPindex..";"..tostring(self.cutterAttacherJointMoveDown))
 			end
 		elseif InputBinding.hasEvent(InputBinding.ACTIVATE_THRESHING) then
-          	for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if self.attachedCutter ~= nil then
-        				MPSend("bc1;vehEvent;threshing;"..MPplayerName..";"..i..";"..tostring(self.attachedCutter:isReelStarted()))
-					end
-				end
+          	if self.attachedCutter ~= nil then
+        		MPSend("bc1;vehEvent;threshing;"..MPplayerName..";"..self.MPindex..";"..tostring(self.attachedCutter:isReelStarted()))
 			end
         elseif InputBinding.hasEvent(InputBinding.EMPTY_GRAIN) then
-        	for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			MPSend("bc1;vehEvent;pipe;"..MPplayerName..";"..i..";"..tostring(self.pipeOpening))
-				end
-			end
+        	MPSend("bc1;vehEvent;pipe;"..MPplayerName..";"..self.MPindex..";"..tostring(self.pipeOpening))
 		end
 	end
 	
@@ -1153,23 +1130,9 @@ function MPupdate(dt)
 			MPupdateTick2 = MPupdateTick2 + 1
 
 			if MPupdateTick1 > 3 then
-				for i=1,#g_currentMission.vehicles do
-					if g_currentMission.vehicles[i].isEntered and (g_currentMission.vehicles[i].lastSpeed*3600) >= 1 then
-						local tempTX, tempTY, tempTZ = getTranslation(g_currentMission.vehicles[i].rootNode)
-						local tempRX, tempRY, tempRZ = getRotation(g_currentMission.vehicles[i].rootNode)
-						local UDPmoverot = "bc1;m;".. i..";"..(round(tempTX+0,1))..";"..(round(tempTY+0,1))..";"..(round(tempTZ+0,1)) .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
-						MPSend(UDPmoverot)
-					end
-				end
-			
 				if g_currentMission.controlPlayer then						
-					if Player.lastXPos ~= currXPos or Player.lastYPos ~= currYPos or Player.lastZPos ~= currZPos then
-						local UDPmoverot = "bc1;plr;"..MPplayerName..";"..(round(Player.lastXPos+0,1))..";"..(round(Player.lastYPos+0,1))..";"..(round(Player.lastZPos+0,1)) -- .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
-						MPSend(UDPmoverot)
-					end
-		
-						if round(Player.rotY+0,1) ~= currYRot then
-						local UDPmoverot = "bc1;plrot;"..MPplayerName..";"..(round(Player.rotY+0,1))
+					if Player.lastXPos ~= currXPos or Player.lastYPos ~= currYPos or Player.lastZPos ~= currZPos or round(Player.rotY+0,1) ~= currYRot then
+						local UDPmoverot = "bc1;plr;"..MPplayerName..";"..(round(Player.lastXPos+0,1))..";"..(round(Player.lastYPos+0,1))..";"..(round(Player.lastZPos+0,1))..";"..(round(Player.rotY+0,1)) -- .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
 						MPSend(UDPmoverot)
 					end
 				
@@ -1177,6 +1140,13 @@ function MPupdate(dt)
 					currYPos = Player.lastYPos
 					currZPos = Player.lastZPos
 					currYRot = round(Player.rotY+0,1) --rounding Y rot to not spam client/servers with the same rotation
+				else
+					if g_currentMission.currentVehicle.isEntered and (g_currentMission.currentVehicle.lastSpeed*3600) >= 1 then
+						local tempTX, tempTY, tempTZ = getTranslation(g_currentMission.currentVehicle.rootNode)
+						local tempRX, tempRY, tempRZ = getRotation(g_currentMission.currentVehicle.rootNode)
+						local UDPmoverot = "bc1;m;"..g_currentMission.currentVehicle.MPindex..";"..(round(tempTX+0,1))..";"..(round(tempTY+0,1))..";"..(round(tempTZ+0,1)) .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
+						MPSend(UDPmoverot)
+					end
 				end
 	
 				MPupdateTick1 = 0
@@ -1825,14 +1795,7 @@ function handleUDPmessage(msg, msgIP, msgPort)
 			for i=1,#MPplayers do
 				if p[2] == MPplayers[i] then
 					setTranslation(MPplayerNode[i], p[3]+0, p[4]+0, p[5]+0)
-				end
-			end
-		end
-	elseif p[1] == "plrot" then
-		if p[2] ~= MPplayerName then
-			for i=1,#MPplayers do
-				if p[2] == MPplayers[i] then
-					setRotation(MPplayerNode[i], 0, p[3]+0, 0)
+					setRotation(MPplayerNode[i], 0, p[6]+0, 0)
 				end
 			end
 		end

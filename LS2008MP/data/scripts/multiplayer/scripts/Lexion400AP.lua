@@ -27,11 +27,8 @@ function MPLexion400APkeyEvent(self, unicode, sym, modifier, isDown)
        
     if self.isEntered then
     	if isDown and sym == Input.KEY_o then
-			for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			MPSend("bc1;vehEvent;frontduals;"..MPplayerName..";"..i..";"..tostring(self.frontduals))
-				end
-			end
+			MPSend("bc1;vehEvent;frontduals;"..MPplayerName..";"..self.MPindex..";"..tostring(self.frontduals))
+
 		end; 
 	end
 end

@@ -148,43 +148,23 @@ function MPareskeyEvent(self, unicode, sym, modifier, isDown)
 	if self.isEntered then
     	if isDown then
     		if sym == Input.KEY_9 then
-				for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
-					end
-				end
+				MPSend("bc1;vehEvent;backwindow;"..MPplayerName..";"..self.MPindex..";"..tostring(self.rotationMaxbackwindow))
 			end; 
 
      		if sym == Input.KEY_p then 
-				for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
-					end
-				end
+				MPSend("bc1;vehEvent;porte;"..MPplayerName..";"..self.MPindex..";"..tostring(self.rotationMaxporte))
 			end;
           
 			if sym == Input.KEY_6 then
-    		    for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;twinWheels;"..MPplayerName..";"..i..";"..tostring(self.twinWheelsActive))
-					end
-				end
+    		    MPSend("bc1;vehEvent;twinWheels;"..MPplayerName..";"..self.MPindex..";"..tostring(self.twinWheelsActive))
 			end;
 		
 			if sym == Input.KEY_7 then
-    		    for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;bigWheels;"..MPplayerName..";"..i..";"..tostring(self.bigWheelsActive))
-					end
-				end
+    		    MPSend("bc1;vehEvent;bigWheels;"..MPplayerName..";"..self.MPindex..";"..tostring(self.bigWheelsActive))
 			end;
 
    			 if sym == Input.KEY_8 then
-    		    for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-						MPSend("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
-					end
-				end
+    		    MPSend("bc1;vehEvent;jumWheels;"..MPplayerName..";"..self.MPindex..";"..tostring(self.jumWheelsActive))
 			end;
 		end
 	end
@@ -249,35 +229,19 @@ function MPrenaultkeyEvent(self, unicode, sym, modifier, isDown)
 	if self.isEntered then
     	if isDown then
     		if sym == Input.KEY_7 then 
-				for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
-					end
-				end
+				MPSend("bc1;vehEvent;backwindow;"..MPplayerName..";"..self.MPindex..";"..tostring(self.rotationMaxbackwindow))
 			end; 
 
      		if sym == Input.KEY_p then 
-				for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-						MPSend("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
-					end
-				end
+				MPSend("bc1;vehEvent;porte;"..MPplayerName..";"..self.MPindex..";"..tostring(self.rotationMaxporte))
 			end;
 		
 			if sym == Input.KEY_o then 
-				for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;porte1;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte1))
-					end
-				end
+				MPSend("bc1;vehEvent;porte1;"..MPplayerName..";"..self.MPindex..";"..tostring(self.rotationMaxporte1))
 			end; 
 		
    			if sym == Input.KEY_6 then
-    		    for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
-					end
-				end
+    		    MPSend("bc1;vehEvent;jumWheels;"..MPplayerName..";"..self.MPindex..";"..tostring(self.jumWheelsActive))
 			end
 		end;
 	end
@@ -370,35 +334,19 @@ function MPcasekeyEvent(self, unicode, sym, modifier, isDown)
 	if self.isEntered then
     	if isDown then
     		if sym == Input.KEY_9 then
-				for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
-					end
-				end
+				MPSend("bc1;vehEvent;backwindow;"..MPplayerName..";"..self.MPindex..";"..tostring(self.rotationMaxbackwindow))
 			end; 
 
      		if sym == Input.KEY_p then 
-				for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
-					end
-				end
+				MPSend("bc1;vehEvent;porte;"..MPplayerName..";"..self.MPindex..";"..tostring(self.rotationMaxporte))
 			end; 
 
 			if sym == Input.KEY_7 then
-    	 	   for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;bigWheels;"..MPplayerName..";"..i..";"..tostring(self.bigWheelsActive))
-					end
-				end
+    	 		MPSend("bc1;vehEvent;bigWheels;"..MPplayerName..";"..self.MPindex..";"..tostring(self.bigWheelsActive))
 			end;
 
    		 	if sym == Input.KEY_8 then
-    	    	for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
-					end
-				end
+    	    	MPSend("bc1;vehEvent;jumWheels;"..MPplayerName..";"..self.MPindex..";"..tostring(self.jumWheelsActive))
 			end
 		end;
 	end
@@ -503,35 +451,19 @@ function MPNhkeyEvent(self, unicode, sym, modifier, isDown)
 	if self.isEntered then
     	if isDown then
     		if sym == Input.KEY_9 then
-				for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;backwindow;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxbackwindow))
-					end
-				end
+				MPSend("bc1;vehEvent;backwindow;"..MPplayerName..";"..self.MPindex..";"..tostring(self.rotationMaxbackwindow))
 			end; 
 
      		if sym == Input.KEY_p then 
-				for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;porte;"..MPplayerName..";"..i..";"..tostring(self.rotationMaxporte))
-					end
-				end
+				MPSend("bc1;vehEvent;porte;"..MPplayerName..";"..self.MPindex..";"..tostring(self.rotationMaxporte))
 			end; 
 
 			if sym == Input.KEY_8 then
-    		    for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-       	 				MPSend("bc1;vehEvent;jumWheels;"..MPplayerName..";"..i..";"..tostring(self.jumWheelsActive))
-					end
-				end;
+    		    MPSend("bc1;vehEvent;jumWheels;"..MPplayerName..";"..self.MPindex..";"..tostring(self.jumWheelsActive))
 			end
 
    		 	if sym == Input.KEY_6 then
-    		    for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;twinWheels;"..MPplayerName..";"..i..";"..tostring(self.twinWheelsActive))
-					end
-				end
+    			MPSend("bc1;vehEvent;twinWheels;"..MPplayerName..";"..self.MPindex..";"..tostring(self.twinWheelsActive))
 			end;
 		end
 	end

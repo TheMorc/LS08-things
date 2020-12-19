@@ -11,17 +11,9 @@ function MPCombine2keyEvent(self, unicode, sym, modifier, isDown)
 	if self.isEntered then
 		if isDown then
 			if sym==self.keys.stroh then
-				for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;hayOn;"..MPplayerName..";"..i..";"..tostring(self.hayOn))
-					end
-				end
+				MPSend("bc1;vehEvent;hayOn;"..MPplayerName..";"..self.MPindex..";"..tostring(self.hayOn))
 			elseif sym==self.keys.pipe then
-				for i=1, table.getn(g_currentMission.vehicles) do
-        			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        				MPSend("bc1;vehEvent;fPipeOpen;"..MPplayerName..";"..i..";"..tostring(self.fPipeOpen))
-					end
-				end
+        		MPSend("bc1;vehEvent;fPipeOpen;"..MPplayerName..";"..self.MPindex..";"..tostring(self.fPipeOpen))
 			end;
 		end
     end          
@@ -142,27 +134,15 @@ function MPCombine2Update(self, dt, isActive)
 	
 	if self.isEntered then
 		if InputBinding.hasEvent(InputBinding.LOWER_IMPLEMENT) then
-           	for i=1, table.getn(g_currentMission.vehicles) do
-       			if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-       				if self.attachedCutter ~= nil then
-       					MPSend("bc1;vehEvent;lowerCutter;"..MPplayerName..";"..i..";"..tostring(self.cutterAttacherJointMoveDown))
-					end
-				end
+           	if self.attachedCutter ~= nil then
+       			MPSend("bc1;vehEvent;lowerCutter;"..MPplayerName..";"..self.MPindex..";"..tostring(self.cutterAttacherJointMoveDown))
 			end
 		elseif InputBinding.hasEvent(InputBinding.ACTIVATE_THRESHING) then
-          	for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			if self.attachedCutter ~= nil then
-						MPSend("bc1;vehEvent;threshing;"..MPplayerName..";"..i..";"..tostring(self.attachedCutter:isReelStarted()))
-					end
-				end
+          	if self.attachedCutter ~= nil then
+				MPSend("bc1;vehEvent;threshing;"..MPplayerName..";"..self.MPindex..";"..tostring(self.attachedCutter:isReelStarted()))
 			end
         elseif InputBinding.hasEvent(InputBinding.EMPTY_GRAIN) then
-        	for i=1, table.getn(g_currentMission.vehicles) do
-        		if g_currentMission.vehicles[i] == g_currentMission.controlledVehicle then
-        			MPSend("bc1;vehEvent;pipe;"..MPplayerName..";"..i..";"..tostring(self.pipeOpening))
-				end
-			end
+        	MPSend("bc1;vehEvent;pipe;"..MPplayerName..";"..self.MPindex..";"..tostring(self.pipeOpening))
 		end
 	end
 end
