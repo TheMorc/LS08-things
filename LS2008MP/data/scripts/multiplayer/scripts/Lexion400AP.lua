@@ -1,4 +1,5 @@
 --Lexion400AP (mod script) MP script
+--v1
 --
 function MPLexion400APScriptUpdate()
 	original.Lexion400APUpdate = Lexion400AP.update

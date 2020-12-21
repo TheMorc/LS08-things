@@ -55,6 +55,7 @@ function serverLoading:update(dt)
 			MPudp:send("syncCurrentMissionToClient;")
 			print("[LS2008MP] current mission sync requested")
 		end
+		MPdistanceIndex = Player.playerName
     end;
 end;
 

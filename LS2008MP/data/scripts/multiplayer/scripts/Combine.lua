@@ -1,4 +1,5 @@
 --Combine (original game script) MP script
+--v1
 --
 function MPCombineScriptUpdate()
 	original.attachCutter = Combine.attachCutter

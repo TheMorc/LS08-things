@@ -273,9 +273,9 @@ function serverMenu:startSelectedGame()
 
     gameMenuSystem.currentMenu = gameMenuSystem.loadScreen;
     
-    
-	MPinitSrvCli = false
-	MPenabled = not MPenabled
+	createChatLog()
+	MPServerInit()
+	MPenabled = true
 	MPsettingsMenuSelected = "" 
 	setCaption("LS2008MP v" .. MPversion .. " | Server | ".. MPplayerName)
 end;

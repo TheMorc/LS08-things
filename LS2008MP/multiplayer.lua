@@ -12,6 +12,9 @@ MPplayerName = "Player"
 --Random numbers on end of your name
 MPplayerNameRndNums = false
 
+--Max player limit
+MPplayerLimit = 10
+
 --Render text on top
 MPrenderDebugText = true
 
@@ -37,6 +40,7 @@ MPmenuPlayerText = "Player name"
 MPmenuIPText = "  IP address"
 MPmenuPortText = "Port number"
 MPmenuWaitText = "Wait.."
+MPmenuLimitText = " Player limit"
 MPsyncingDataText = "Syncing game data with %s\n          Please wait..."
 MPmenuClientButton = "Join"
 MPmenuServerButton = "Host"

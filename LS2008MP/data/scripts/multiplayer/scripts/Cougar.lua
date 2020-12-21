@@ -2,12 +2,14 @@
 --created on 18.12.2020, 23:37 by Morc
 
 --Cougar (mod script) MP script
+--v1
 --
 function MPCougarScriptUpdate()
 	original.CougarUpdate = Cougar.update
 	original.CougarkeyEvent = Cougar.keyEvent
 	Cougar.update = MPCougarUpdate
 	Cougar.keyEvent = MPCougarkeyEvent
+	MPCougarOriginalUpdate = MPfakeFunction
 end
 
 

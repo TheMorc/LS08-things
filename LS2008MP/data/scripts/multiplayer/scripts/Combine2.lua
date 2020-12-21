@@ -1,4 +1,5 @@
 --Combine2 (mod script) MP script
+--v1
 --
 function MPCombine2ScriptUpdate()
 	original.ClaasJaguarAPkeyEvent = ClaasJaguarAP.keyEvent

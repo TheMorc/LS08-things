@@ -1,4 +1,5 @@
 --case (ModAgri v2 script) MP script
+--v1
 --
 function MPcaseScriptUpdate()
 	original.casekeyEvent = case.keyEvent

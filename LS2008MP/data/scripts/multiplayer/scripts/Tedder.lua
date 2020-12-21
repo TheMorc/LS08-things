@@ -1,4 +1,5 @@
 --Tedder (mod script) MP script
+--v1
 --
 function MPTedderScriptUpdate()
 	original.TedderUpdate = Tedder.update

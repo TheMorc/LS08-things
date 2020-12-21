@@ -1,4 +1,5 @@
 --Plough (original game script) MP script
+--v1
 --
 function MPPloughScriptUpdate()
 	original.ploughUpdate = Plough.update

@@ -1,4 +1,5 @@
 --ares (ModAgri v2 script) MP script
+--v1
 --
 function MParesScriptUpdate()
 	original.areskeyEvent = ares.keyEvent

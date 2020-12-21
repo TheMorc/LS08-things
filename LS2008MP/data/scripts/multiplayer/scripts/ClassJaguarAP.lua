@@ -1,4 +1,5 @@
 --ClassJaguarAP (mod script) MP script
+--v1
 --
 function MPClassJaguarAPScriptUpdate()
 	original.ClaasJaguarAPkeyEvent = ClaasJaguarAP.keyEvent

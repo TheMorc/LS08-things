@@ -1,4 +1,5 @@
 --Sprayer (original game script) MP script
+--v1
 --
 function MPSprayerScriptUpdate()
 	original.sprayerUpdate = Sprayer.update

@@ -1,4 +1,5 @@
 --CombineAP2 (mod script) MP script
+--v1
 --
 function MPCombineAP2ScriptUpdate()
 	original.CombineAP2keyEvent = CombineAP2.keyEvent

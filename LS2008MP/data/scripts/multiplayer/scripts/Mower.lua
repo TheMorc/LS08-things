@@ -1,4 +1,5 @@
 --Mower (original addon game script) MP script
+--v1
 --
 function MPMowerScriptUpdate()
 	original.mowerUpdate = Mower.update

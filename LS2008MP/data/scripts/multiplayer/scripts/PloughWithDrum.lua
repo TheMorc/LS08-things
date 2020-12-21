@@ -1,4 +1,5 @@
 --PloughWithDrum (mod script) MP script
+--v1
 --
 function MPPloughWithDrumScriptUpdate()
 	original.PloughWithDrumUpdate = PloughWithDrum.update

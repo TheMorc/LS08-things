@@ -1,4 +1,5 @@
 --Trailer (original game script) MP script
+--v1
 --
 function MPTrailerScriptUpdate()
 	original.trailerAttachTrailer = Trailer.attachTrailer

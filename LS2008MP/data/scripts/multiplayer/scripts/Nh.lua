@@ -1,4 +1,5 @@
 -- Nh (ModAgri v2 script) MP script
+--v1
 --
 function MPNhScriptUpdate()
 	original.NhkeyEvent = Nh.keyEvent
