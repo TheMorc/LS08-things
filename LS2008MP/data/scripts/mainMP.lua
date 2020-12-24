@@ -87,8 +87,19 @@ function init()
    	end
 	print("[LS2008MP] main.lua injector - load and init original main.lua")
 	source("data/scripts/main.lua")
-	init() --exec init from original main.lua
-
+	local status, err = pcall(function() init() end)
+	if status then --load multiplayer.lua settings file and print failed message if not found
+		print("[LS2008MP] main.lua injector - main.lua init successful")
+	else
+		print("[LS2008MP] main.lua injector - main.lua init failed")
+		print(err)
+		draw = missingScriptsDraw
+		update = MPfakeFunction
+		mouseEvent = MPfakeFunction
+		keyEvent = MPfakeFunction
+		return
+	end
+	
 	--write functions to the "original" class
 	original.drawing = draw
 	original.keyEvent = keyEvent
@@ -215,11 +226,13 @@ function init()
 	os.execute(dircmd .. " /b > .MPfileList")
 	for f in io.lines(".MPfileList") do
         local script = f:gsub(".lua", "")
-        if pcall(function() require("data/scripts/multiplayer/scripts/" .. script) end) then
+        local status, err = pcall(function() require("data/scripts/multiplayer/scripts/" .. script) end)
+        if status then
         	print("[LS2008MP] added vehicle/custom script " .. script)
         	MPcustomScripts[#MPcustomScripts+1] = script
         else
 			print("[LS2008MP] ERROR: failed to load vehicle/custom script " .. script)
+			print(err)
 		end
   	end
   	
@@ -910,7 +923,6 @@ function MPmodifyVehicleScripts()
 	print("[LS2008MP] postMission00load script update, do not panic unless necessary (just ask Morc if you're worried)")
 	
 	if Mission00 ~= nil then
-		original.missionUpdate = Mission00.update
 		Mission00.update = MPmission00Update
 		print("[LS2008MP] modified game script Mission00")
 	else
@@ -938,10 +950,12 @@ function MPmodifyVehicleScripts()
 	--custom script modification updater
 	for i,script in ipairs(MPcustomScripts) do
 		local customScript = "MP"..script.."ScriptUpdate()"
-		if pcall(function () loadstring(customScript)() end) then
+		local status, err = pcall(function() loadstring(customScript)() end)
+		if status then
 			print(string.format(modifiedVeh, script))
 		else
 			print(string.format(noVehScript, script))
+			print(err)
 		end
 	end
 	print("[LS2008MP] vehicle/custom script modification finished")
@@ -1053,7 +1067,7 @@ end
 
 --missing scripts.zip/main.lua draw function
 function missingScriptsDraw()
-	renderText(0.0, 0.96, 0.02, "LS2008MP v" .. MPversion .. " initialization failure");
+	renderText(0.0, 0.98, 0.02, "LS2008MP v" .. MPversion .. " initialization failure");
 	renderText(0.23, 0.019+0.029+1-0.539, 0.05, "main.lua or scripts.zip is missing\n      Check your game files")
 end
 
@@ -1661,8 +1675,6 @@ function MPcleanPlrListRefresh()
 	for i=1, #MPplayers do
 		if MPplayers[i] ~= "N/A" then
 			MPcleanPlayers[#MPcleanPlayers+1] = MPplayers[i]
-			print("refresh, " .. MPplayers[i])
-			print("count: " .. #MPplayers .. "   :" .. #MPcleanPlayers)
 		end
 	end
 end

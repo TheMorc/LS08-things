@@ -56,6 +56,7 @@ function serverLoading:update(dt)
 			print("[LS2008MP] current mission sync requested")
 		end
 		MPdistanceIndex = Player.playerName
+		MPcleanPlrListRefresh()
     end;
 end;
 
