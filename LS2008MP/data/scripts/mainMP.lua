@@ -1,9 +1,9 @@
 -- LS2008MP - main.lua injector
 -- the main part of the LS2008MP project
 -- beware!, this is an incredible spaghetti code and although it works somehow i just don't recommend even trying to touch it
--- because it may break out of sudden and not a single person will ever fix it. 
+-- because it may break suddenly and not a single person will ever fix it. 
 -- @author  Richard Gráčik (mailto:r.gracik@gmail.com)
--- @date  10.11.2020 - 21.12.2020
+-- @date  10.11.2020 - 17.1.2021
 
 MPloaded = false --used to show a message if something shits
 MPversion = "0.11 luasockets"
@@ -47,6 +47,10 @@ MPcleanPlayers = {}
 --MP GUI things
 MPsettingsMenuSelected = ""
 MPsettingsMenuxPos = 1-0.03-0.02-0.02-0.15*3
+MPtempLimit = 0
+MPtempIP = ""
+MPtempPort = 2008
+MPtempName = ""
 
 --savegame stuff
 MPclientsavegame = {}
@@ -62,7 +66,7 @@ isModAgri = false
 
 MPcustomScripts = {} --custom script thing for custom scripts obviously
 
---array with original functions from game
+--table with original functions from game
 original = {}
 
 --MP main function used to inject main.lua
@@ -172,10 +176,14 @@ function init()
 	else
 		if MPplayerLimit < 2 or MPplayerLimit > 30 then
 			MPplayerLimit = 10
-			print("[LS2008MP] ERROR: player limit in multiplayer.lua out of bounds [1-30]")
+			print("[LS2008MP] ERROR: player limit in multiplayer.lua out of bounds [1-30], setting it to 10")
 		end
 	end
 	print("[LS2008MP] current player limit: " .. MPplayerLimit) 
+	MPtempLimit = MPplayerLimit
+	MPtempIP = MPip
+	MPtempPort = MPport
+	MPtempName = MPplayerName
 	
 	print("[LS2008MP] loading i18n")
 	local notFoundText = "[LS2008MP] WARNING: %s not found in multiplayer.lua, defaulting to \"%s\""
@@ -219,6 +227,11 @@ function init()
 		MPmenuLimitText = " Player limit"
 		print(string.format(notFoundText, "MPmenuLimitText", MPmenuLimitText)) 
 	end
+	if MPmenuSaveWarningText == nil then
+		MPmenuSaveWarningText = "Save changes to not lose them!"
+		print(string.format(notFoundText, "MPmenuSaveWarningText", MPmenuSaveWarningText)) 
+	end
+	
 	
 	
 	print("[LS2008MP] loading custom vehicle scripts")
@@ -248,7 +261,7 @@ function init()
 	hudMPchatHistory = Overlay:new("hudMPchatHistory", "data/menu/MP_chatoverlay.png", 0, 0.485, 0.34, 0.477)
 	hudMPchatTextField = Overlay:new("hudMPchatTextField", "data/missions/please_wait_background.png", 0.001, 0.45, 0.34, 0.03)
 	
-	--main menu buttons
+	--main menu button replacing
 	gameMenuSystem.mainMenu.items[3] = OverlayButton:new(Overlay:new("GUIMPclientButton", MPclientButtonPath, 0.05, 0.5, 0.15, 0.06), MPopenClientMenu)
 	gameMenuSystem.mainMenu.items[4] = OverlayButton:new(Overlay:new("GUIMPserverButton", MPserverButtonPath, 0.05, 0.43, 0.15, 0.06), MPopenServerMenu)
 	
@@ -267,7 +280,7 @@ function init()
 	gameMenuSystem.MPsettingsMenu:addItem(OverlayButton:new(Overlay:new("GUIMPsettingsSelectIP", "data/menu/missionmenu_background.png", 0.35, 0.372, 0.55, 0.06), MPsettingsMenuSelectIP))
 	gameMenuSystem.MPsettingsMenu:addItem(OverlayButton:new(Overlay:new("GUIMPsettingsSelectPort", "data/menu/missionmenu_background.png", 0.35, 0.302, 0.55, 0.06), MPsettingsMenuSelectPort))
     
-
+	--misc stuff
 	consoleBackground = Overlay:new("GUIMPsettingsBackground", "data/menu/settings_background.png", 0, 0.47, 1, 0.53); 
 	
 	createFolder(getUserProfileAppPath() .. "chatlogs/")
@@ -281,7 +294,7 @@ end
 
 --MP GUI open and button functions
 function MPopenServerMenu()
-	print("[LS2008MP] server")
+	print("[LS2008MP] switched to server")
 	MPstate = "Server"
 	MPHeartbeat = MPServerHeartbeat
 	MPSend = MPServerSend
@@ -289,13 +302,13 @@ function MPopenServerMenu()
     gameMenuSystem.currentMenu = gameMenuSystem.serverMenu;
 end;
 function MPopenClientMenu()
-	print("[LS2008MP] client")
+	print("[LS2008MP] switched to client")
 	MPstate = "Client"
 	MPHeartbeat = MPClientHeartbeat
 	MPSend = MPClientSend
 	
 	gameMenuSystem.MPsettingsMenu:reset();
-	MPsettingsMenuxPos = 1-0.03-0.02-0.02-0.15*3
+	MPsettingsMenuxPos = 0.48
     gameMenuSystem.MPsettingsMenu.items[7] = OverlayButton:new(Overlay:new("GUIMPsettingsBackButton", "data/menu/back_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), OnserverMenuBack)
     MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
     gameMenuSystem.MPsettingsMenu.items[8] = OverlayButton:new(Overlay:new("GUIMPsettingsSaveButton", "data/menu/save_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), MPsettingsMenuSave)
@@ -309,7 +322,7 @@ function MPopenSettingsMenu()
 	print("[LS2008MP] settings selected using GUI button")
 	
 	gameMenuSystem.MPsettingsMenu:reset();
-	MPsettingsMenuxPos = 1-0.03-0.02-0.02-0.15*3
+	MPsettingsMenuxPos = 0.48
     gameMenuSystem.MPsettingsMenu.items[7] = OverlayButton:new(Overlay:new("nil", "data/menu/ingame_play_button".. g_languageSuffix .. ".png", 0, 0, 0, 0), MPfakeFunction)
     MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
     gameMenuSystem.MPsettingsMenu.items[8] = OverlayButton:new(Overlay:new("GUIMPsettingsBackButton", "data/menu/back_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), settingsMenuBack)
@@ -917,10 +930,11 @@ function MPupdate(dt)
 end
 
 function MPmodifyVehicleScripts()
-	local modifiedVeh = "[LS2008MP] modified vehicle/custom script %s"
-	local noVehScript = "[LS2008MP] vehicle/custom script %s not found (This might not be a problem)"
+	local modifiedVeh = "[LS2008MP] script %s was modified successfully!"
+	local noVehScript = "[LS2008MP] script %s not found"
+	local modifyError = "[LS2008MP] An error happened while modifying script %s"
 	
-	print("[LS2008MP] postMission00load script update, do not panic unless necessary (just ask Morc if you're worried)")
+	print("[LS2008MP] postMission00load script update, do not panic unless necessary (or just ask Morc if you're really worried)")
 	
 	if Mission00 ~= nil then
 		Mission00.update = MPmission00Update
@@ -954,8 +968,12 @@ function MPmodifyVehicleScripts()
 		if status then
 			print(string.format(modifiedVeh, script))
 		else
-			print(string.format(noVehScript, script))
-			print(err)
+			if err:find("attempt to index global '" .. script .. "'") then
+				print(string.format(noVehScript, script))
+			else
+				print(string.format(modifyError, script))
+				print(err)
+			end
 		end
 	end
 	print("[LS2008MP] vehicle/custom script modification finished")
@@ -971,7 +989,7 @@ function MPloadVehicle(self, filename, x, yOffset, z, yRot)
     else
         local typeDef = g_vehicleTypes[typeName];
         if typeDef == nil then
-            print("Error loadVehicle: unknown type '"..typeName.."' in '"..filename.."'");
+            print("Error loadVehicle: unknown vehicle type '"..typeName.."' specified in '"..filename.."'");
         else
             local callString = "vehicle = " .. typeDef.className .. ":new(\""..filename.."\", "..x..", "..yOffset..", "..z..", "..yRot..");";
             loadstring(callString)();
@@ -990,22 +1008,22 @@ function MPloadVehicle(self, filename, x, yOffset, z, yRot)
             ret = vehicle;
             if ret.configFileName == nil then
             	 ret.configFileName = filename
-            	 print("[LS2008MP] seems like the original game, adding configFileName to vehicle " .. filename)
+            	 print("[LS2008MP] seems like the original game, adding configFileName to vehicle '"..filename.."'")
             end
             if ret.setWorldPosition == nil then
             	ret.setWorldPosition = MPvehiclesetWorldPosition
-            	print("[LS2008MP] adding setWorldPosition function to vehicle " .. filename)
+            	print("[LS2008MP] adding setWorldPosition function to vehicle '"..filename.."'")
             end
             if ret.vehicleName == nil then
-            	ret.vehicleName = getXMLString(xmlFile, "vehicle.name")
+            	ret.vehicleName = getXMLString(xmlFile, "vehicle.name.de") --trying the first vehicle name method, reading the german name from xml
             	if ret.vehicleName ~= nil then
-            		print("[LS2008MP] adding vehicleName variable using method 1 as " .. ret.vehicleName .. " to vehicle " .. filename)
+            		print("[LS2008MP] adding vehicleName variable using method 1 as " .. ret.vehicleName .. " to vehicle '"..filename.."'")
             	else
-            		ret.vehicleName = getXMLString(xmlFile, "vehicle.name.de") --trying the second vehicle name method, reading the deutsch name
+            		ret.vehicleName = getXMLString(xmlFile, "vehicle.name") --some mods use only <name>Vehicle name</name> instead of <name><de>Vehicle name</de><name>
             		if ret.vehicleName ~= nil then
-            			print("[LS2008MP] adding vehicleName variable using method 2 as " .. ret.vehicleName .. " to vehicle " .. filename)
+            			print("[LS2008MP] adding vehicleName variable using method 2 as " .. ret.vehicleName .. " to vehicle '"..filename.."'")
             		else
-            			print("[LS2008MP] tried adding vehicleName variable to vehicle " .. filename .. " but failed...")
+            			print("[LS2008MP] tried adding vehicleName variable to vehicle '"..filename.."' but failed...")
             		end
             	end
             end
@@ -1153,6 +1171,12 @@ function MPdraw()
 		end
 		if MPenabled then
 			renderText(MPsettingsMenuxPos+0.02, 0.02, 0.06, MPmenuWaitText)
+		end
+		if MPtempName ~= MPplayerName or MPtempIP ~= MPip or MPtempPort ~= MPport or MPtempLimit ~= MPplayerLimit and MPstate == "Server" then
+			setTextColor(0,0,0,1)
+			renderText(0.02+0.003, 0.02-0.003,0.045, MPmenuSaveWarningText)
+			setTextColor(1,1,1,1)
+			renderText(0.02, 0.02,0.045, MPmenuSaveWarningText)
 		end
 		setTextBold(false);
 		renderText(0.35, 0.44,0.06, MPplayerName)

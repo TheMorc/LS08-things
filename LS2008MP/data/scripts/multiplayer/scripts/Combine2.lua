@@ -1,9 +1,10 @@
 --Combine2 (mod script) MP script
---v1
+--v1.1
+--fixed wrong ClaasJaguarAP name to be Combine2
 --
 function MPCombine2ScriptUpdate()
-	original.ClaasJaguarAPkeyEvent = ClaasJaguarAP.keyEvent
-	ClaasJaguarAP.keyEvent = MPClaasJaguarAPkeyEvent --using the same keyevent update as for CombineAP2
+	original.Combine2keyEvent = Combine2.keyEvent
+	Combine2.keyEvent = MPCombine2keyEvent --using the same keyevent update as for CombineAP2
 end
 
 function MPCombine2keyEvent(self, unicode, sym, modifier, isDown)

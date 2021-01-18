@@ -1,7 +1,8 @@
---ClassJaguarAP (mod script) MP script
---v1
+--ClaasJaguarAP (mod script) MP script
+--v1.1
+--fixed the damn Class to Claas name confusion
 --
-function MPClassJaguarAPScriptUpdate()
+function MPClaasJaguarAPScriptUpdate()
 	original.ClaasJaguarAPkeyEvent = ClaasJaguarAP.keyEvent
 	ClaasJaguarAP.keyEvent = MPClaasJaguarAPkeyEvent --using the same keyevent update as for CombineAP2
 end
