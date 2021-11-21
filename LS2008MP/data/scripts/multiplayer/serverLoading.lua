@@ -52,7 +52,7 @@ function serverLoading:update(dt)
         MPoneTimeUpdateDone = true --oneTimeUpdateDone moved from MPupdate here, it's just more convenient
 		MPmodifyVehicleScripts()
 		if MPstate == "Client" then 
-			MPudp:send("syncCurrentMissionToClient;")
+			server:send("syncCurrentMissionToClient;")
 			print("[LS2008MP] current mission sync requested")
 		end
 		MPdistanceIndex = Player.playerName

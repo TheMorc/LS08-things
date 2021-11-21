@@ -3,20 +3,14 @@
 -- beware!, this is an incredible spaghetti code and although it works somehow i just don't recommend even trying to touch it
 -- because it may break suddenly and not a single person will ever fix it. 
 -- @author  Richard Gráčik (mailto:r.gracik@gmail.com)
--- @date  10.11.2020 - 17.1.2021
+-- @date  10.11.2020 - 21.11.2021
 
 MPloaded = false --used to show a message if something shits
-MPversion = "0.11 luasockets"
+MPversion = "0.11 enet"
 
 --LuaSocket stuff
-MPsocket = require("socket")
+MPsocket = require "enet"
 MPip, MPport = "127.0.0.1", 2008 --temporary ip and port
-MPudp = socket.udp()
-MPudp:settimeout(0)
-MPtcp = assert(socket.bind("*", 2008)) --it's fixed on port 2008 for now
-MPtcp:settimeout(10)
-clientTCP = assert(socket.tcp())
-clientTCP:settimeout(10)
 lastUDPmessage = ""
 
 --MP server-client variables
@@ -42,7 +36,9 @@ MPplayerIPs = {}
 MPplayerPorts = {}
 MPplayerVehicle = {}
 MPplayerNode = {}
-MPcleanPlayers = {}
+MPcleanPlayers = {} --this is the clean player list without N/As and other stuff
+
+MPpeerList = {}
 
 --MP GUI things
 MPsettingsMenuSelected = ""
@@ -69,6 +65,8 @@ MPcustomScripts = {} --custom script thing for custom scripts obviously
 --table with original functions from game
 original = {}
 
+hideHUD = false;
+
 --MP main function used to inject main.lua
 function init()
 	print("[LS2008MP v" .. MPversion .. "] init")
@@ -92,7 +90,7 @@ function init()
 	print("[LS2008MP] main.lua injector - load and init original main.lua")
 	source("data/scripts/main.lua")
 	local status, err = pcall(function() init() end)
-	if status then --load multiplayer.lua settings file and print failed message if not found
+	if status then
 		print("[LS2008MP] main.lua injector - main.lua init successful")
 	else
 		print("[LS2008MP] main.lua injector - main.lua init failed")
@@ -112,6 +110,7 @@ function init()
 	original.getInputAxis = getInputAxis
 	original.OnInGameMenuMenu = OnInGameMenuMenu
 	original.loadVehicle = BaseMission.loadVehicle
+	original.renderText = renderText
 	
 	--rewrite update and draw functions with MP versions
 	print("[LS2008MP] main.lua injector - adding MP support to original scripts") -- just so it's a bit better to separate potential errors
@@ -125,7 +124,7 @@ function init()
 	OnInGameMenuMenu = MPOnInGameMenuMenu
 	InGameMenu.render = MPInGameMenuRender
 	BaseMission.loadVehicle = MPloadVehicle
-	GameMenuSystem.inGameMenuMode = MPinGameMenuMode
+	OnInGameMenu = MPOnInGameMenu
 	GameMenuSystem.playMode = MPplayMode
 	BaseMission.getVehicleInRange = MPgetVehicleInRange
 	print("[LS2008MP] main.lua injector - finished")
@@ -189,83 +188,82 @@ function init()
 	local notFoundText = "[LS2008MP] WARNING: %s not found in multiplayer.lua, defaulting to \"%s\""
 	if MPmenuPlayerText == nil then
 		MPmenuPlayerText = "Player name"
-		print(string.format(notFoundText, "MPmenuPlayerText", MPmenuPlayerText)) 
+		print(notFoundText:format("MPmenuPlayerText", MPmenuPlayerText)) 
 	end
 	if MPmenuIPText == nil then
 		MPmenuIPText = "  IP address"
-		print(string.format(notFoundText, "MPmenuIPText", MPmenuIPText)) 
+		print(notFoundText:format("MPmenuIPText", MPmenuIPText)) 
 	end
 	if MPmenuPortText == nil then
 		MPmenuPortText = "Port number"
-		print(string.format(notFoundText, "MPmenuPortText", MPmenuPortText))  
+		print(notFoundText:format("MPmenuPortText", MPmenuPortText))  
 	end
 	if MPmenuWaitText == nil then
 		MPmenuWaitText = "Wait.."
-		print(string.format(notFoundText, "MPmenuWaitText", MPmenuWaitText)) 
+		print(notFoundText:format("MPmenuWaitText", MPmenuWaitText)) 
 	end
 	if MPsyncingDataText == nil then
 		MPsyncingDataText = "Syncing game data with %s\n          Please wait..."
-		print(string.format(notFoundText, "MPsyncingDataText", MPsyncingDataText)) 
+		print(notFoundText:format("MPsyncingDataText", MPsyncingDataText)) 
 	end
 	if MPmenuServerButton == nil then
 		MPmenuServerButton = "Host"
-		print(string.format(notFoundText, "MPmenuServerButton", MPmenuServerButton)) 
+		print(notFoundText:format("MPmenuServerButton", MPmenuServerButton)) 
 	end
 	if MPmenuClientButton == nil then
 		MPmenuClientButton = "Join"
-		print(string.format(notFoundText, "MPmenuClientButton", MPmenuClientButton)) 
+		print(notFoundText:format("MPmenuClientButton", MPmenuClientButton)) 
 	end
 	if MPplayerListSitting1 == nil then
 		MPplayerListSitting1 = "%s sitting"
-		print(string.format(notFoundText, "MPplayerListSitting1", MPplayerListSitting1)) 
+		print(notFoundText:format("MPplayerListSitting1", MPplayerListSitting1)) 
 	end
 	if MPplayerListSitting2 == nil then
 		MPplayerListSitting2 = "%s sitting in %s"
-		print(string.format(notFoundText, "MPplayerListSitting2", MPplayerListSitting2)) 
+		print(notFoundText:format("MPplayerListSitting2", MPplayerListSitting2)) 
 	end
 	if MPmenuLimitText == nil then
 		MPmenuLimitText = " Player limit"
-		print(string.format(notFoundText, "MPmenuLimitText", MPmenuLimitText)) 
+		print(notFoundText:format("MPmenuLimitText", MPmenuLimitText)) 
 	end
 	if MPmenuSaveWarningText == nil then
 		MPmenuSaveWarningText = "Save changes to not lose them!"
-		print(string.format(notFoundText, "MPmenuSaveWarningText", MPmenuSaveWarningText)) 
+		print(notFoundText:format("MPmenuSaveWarningText", MPmenuSaveWarningText)) 
 	end
 	
 	
 	
-	print("[LS2008MP] loading custom vehicle scripts")
+	print("[LS2008MP] loading MP scripts from " .. getAppBasePath().."data/scripts/multiplayer/scripts\"")
 	dircmd = string.gsub("dir \""..getAppBasePath().."data/scripts/multiplayer/scripts\"", "/", "\\")
 	os.execute(dircmd .. " /b > .MPfileList")
 	for f in io.lines(".MPfileList") do
         local script = f:gsub(".lua", "")
         local status, err = pcall(function() require("data/scripts/multiplayer/scripts/" .. script) end)
         if status then
-        	print("[LS2008MP] added vehicle/custom script " .. script)
+        	print("[LS2008MP] added MP script " .. script)
         	MPcustomScripts[#MPcustomScripts+1] = script
         else
-			print("[LS2008MP] ERROR: failed to load vehicle/custom script " .. script)
+			print("[LS2008MP] ERROR: failed to load MP script " .. script)
 			print(err)
 		end
   	end
-  	
 	
-	print("[LS2008MP] loading additional MP scripts") 
+	
+	print("[LS2008MP] adding GUI and HUD")
+	source("data/scripts/multiplayer/OverlayBetterButton.lua")
 	source("data/scripts/multiplayer/serverMenu.lua")
 	gameMenuSystem.serverMenu = serverMenu:new(gameMenuSystem.bgOverlay)
 	source("data/scripts/multiplayer/serverLoading.lua")
 	
-	
-	print("[LS2008MP] adding GUI and HUD") 
 	--chat overlays
 	hudMPchatHistory = Overlay:new("hudMPchatHistory", "data/menu/MP_chatoverlay.png", 0, 0.485, 0.34, 0.477)
 	hudMPchatTextField = Overlay:new("hudMPchatTextField", "data/missions/please_wait_background.png", 0.001, 0.45, 0.34, 0.03)
 	
 	--main menu button replacing
-	gameMenuSystem.mainMenu.items[3] = OverlayButton:new(Overlay:new("GUIMPclientButton", MPclientButtonPath, 0.05, 0.5, 0.15, 0.06), MPopenClientMenu)
-	gameMenuSystem.mainMenu.items[4] = OverlayButton:new(Overlay:new("GUIMPserverButton", MPserverButtonPath, 0.05, 0.43, 0.15, 0.06), MPopenServerMenu)
+	gameMenuSystem.mainMenu.items[3] = OverlayBetterButton:new(Overlay:new("GUIMPclientButton", MPclientButtonPath, 0.05, 0.5, 0.15, 0.06), MPopenMenu, "Client")
+	gameMenuSystem.mainMenu.items[4] = OverlayBetterButton:new(Overlay:new("GUIMPserverButton", MPserverButtonPath, 0.05, 0.43, 0.15, 0.06), MPopenMenu, "Server")
 	
-	--client connect menu
+	--client connect/settings menu
 	gameMenuSystem.MPsettingsMenu = OverlayMenu:new();
     gameMenuSystem.MPsettingsMenu:addItem(Overlay:new("background01",  "data/menu/background01".. g_languageSuffix .. ".png", 0, 0, 1, 1));
     if MPuseNewLogo then
@@ -276,9 +274,9 @@ function init()
 		gameMenuSystem.MPsettingsMenu:addItem(Overlay:new("main_logo", "data/menu/main_logo".. g_languageSuffix .. ".png", 0.1, 0.575, 0.8, 0.4));
 	end
     gameMenuSystem.MPsettingsMenu:addItem(Overlay:new("GUIMPsettingsBackground", "data/menu/settings_background.png", 0.02, 0.08, 0.95, 0.44));
-	gameMenuSystem.MPsettingsMenu:addItem(OverlayButton:new(Overlay:new("GUIMPsettingsSelectName", "data/menu/missionmenu_background.png", 0.35, 0.442, 0.55, 0.06), MPsettingsMenuSelectName))
-	gameMenuSystem.MPsettingsMenu:addItem(OverlayButton:new(Overlay:new("GUIMPsettingsSelectIP", "data/menu/missionmenu_background.png", 0.35, 0.372, 0.55, 0.06), MPsettingsMenuSelectIP))
-	gameMenuSystem.MPsettingsMenu:addItem(OverlayButton:new(Overlay:new("GUIMPsettingsSelectPort", "data/menu/missionmenu_background.png", 0.35, 0.302, 0.55, 0.06), MPsettingsMenuSelectPort))
+	gameMenuSystem.MPsettingsMenu:addItem(OverlayBetterButton:new(Overlay:new("GUIMPsettingsSelectName", "data/menu/missionmenu_background.png", 0.35, 0.442, 0.55, 0.06), MPsettingsMenuSelect, "name"))
+	gameMenuSystem.MPsettingsMenu:addItem(OverlayBetterButton:new(Overlay:new("GUIMPsettingsSelectIP", "data/menu/missionmenu_background.png", 0.35, 0.372, 0.55, 0.06), MPsettingsMenuSelect, "ip"))
+	gameMenuSystem.MPsettingsMenu:addItem(OverlayBetterButton:new(Overlay:new("GUIMPsettingsSelectPort", "data/menu/missionmenu_background.png", 0.35, 0.302, 0.55, 0.06), MPsettingsMenuSelect, "port"))
     
 	--misc stuff
 	consoleBackground = Overlay:new("GUIMPsettingsBackground", "data/menu/settings_background.png", 0, 0.47, 1, 0.53); 
@@ -293,67 +291,56 @@ function init()
 end
 
 --MP GUI open and button functions
-function MPopenServerMenu()
-	print("[LS2008MP] switched to server")
-	MPstate = "Server"
-	MPHeartbeat = MPServerHeartbeat
-	MPSend = MPServerSend
-	gameMenuSystem.serverMenu:reset();
-    gameMenuSystem.currentMenu = gameMenuSystem.serverMenu;
-end;
-function MPopenClientMenu()
-	print("[LS2008MP] switched to client")
-	MPstate = "Client"
-	MPHeartbeat = MPClientHeartbeat
-	MPSend = MPClientSend
+function MPopenMenu(argument)
+	if argument == "Server" then
+		print("[LS2008MP] switched to server")
+		MPstate = "Server"
+		MPHeartbeat = MPServerHeartbeat
+		MPSend = MPServerSend
+		gameMenuSystem.serverMenu:reset();
+    	gameMenuSystem.currentMenu = gameMenuSystem.serverMenu;
+    	return
+	end
 	
 	gameMenuSystem.MPsettingsMenu:reset();
 	MPsettingsMenuxPos = 0.48
-    gameMenuSystem.MPsettingsMenu.items[7] = OverlayButton:new(Overlay:new("GUIMPsettingsBackButton", "data/menu/back_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), OnserverMenuBack)
-    MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
-    gameMenuSystem.MPsettingsMenu.items[8] = OverlayButton:new(Overlay:new("GUIMPsettingsSaveButton", "data/menu/save_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), MPsettingsMenuSave)
-    MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
-	gameMenuSystem.MPsettingsMenu.items[9] = OverlayButton:new(Overlay:new("GUIMPclientPlayButton", "data/menu/ingame_play_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), MPclientMenuConnect) --client only button showing up in settings
-    gameMenuSystem.MPsettingsMenu.items[10] = OverlayButton:new(Overlay:new("GUIMPsettingsLimitDown", "data/menu/small_button_left.png", 0,0,0,0), MPfakeFunction)
+	gameMenuSystem.MPsettingsMenu.items[7] = OverlayButton:new(Overlay:new("nil", "data/menu/ingame_play_button".. g_languageSuffix .. ".png", 0, 0, 0, 0), MPfakeFunction)
+	gameMenuSystem.MPsettingsMenu.items[10] = OverlayButton:new(Overlay:new("GUIMPsettingsLimitDown", "data/menu/small_button_left.png", 0,0,0,0), MPfakeFunction)
     gameMenuSystem.MPsettingsMenu.items[11] = OverlayButton:new(Overlay:new("GUIMPsettingsLimitUp", "data/menu/small_button_right.png", 0,0,0,0), MPfakeFunction)
-    gameMenuSystem.currentMenu = gameMenuSystem.MPsettingsMenu;
-end;
-function MPopenSettingsMenu()
-	print("[LS2008MP] settings selected using GUI button")
 	
-	gameMenuSystem.MPsettingsMenu:reset();
-	MPsettingsMenuxPos = 0.48
-    gameMenuSystem.MPsettingsMenu.items[7] = OverlayButton:new(Overlay:new("nil", "data/menu/ingame_play_button".. g_languageSuffix .. ".png", 0, 0, 0, 0), MPfakeFunction)
-    MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
-    gameMenuSystem.MPsettingsMenu.items[8] = OverlayButton:new(Overlay:new("GUIMPsettingsBackButton", "data/menu/back_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), settingsMenuBack)
-    MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
-	gameMenuSystem.MPsettingsMenu.items[9] = OverlayButton:new(Overlay:new("GUIMPsettingsSaveButton", "data/menu/save_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), MPsettingsMenuSave)
-	gameMenuSystem.MPsettingsMenu.items[10] = OverlayButton:new(Overlay:new("GUIMPsettingsLimitDown", "data/menu/small_button_left.png", 0.35, 0.232, 0.06*0.75, 0.06), MPsettingsLimitDown)
-    gameMenuSystem.MPsettingsMenu.items[11] = OverlayButton:new(Overlay:new("GUIMPsettingsLimitUp", "data/menu/small_button_right.png", 0.55, 0.232, 0.06*0.75, 0.06), MPsettingsLimitUp)
-    gameMenuSystem.currentMenu = gameMenuSystem.MPsettingsMenu;
-end;
+	if argument == "Client" then
+		print("[LS2008MP] switched to client")
+		MPstate = "Client"
+		MPHeartbeat = MPClientHeartbeat
+		MPSend = MPClientSend
+		gameMenuSystem.MPsettingsMenu.items[7] = OverlayBetterButton:new(Overlay:new("GUIMPsettingsBackButton", "data/menu/back_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), OnserverMenu, "gameMenuSystem:mainMenuMode()")
+    	MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
+    	gameMenuSystem.MPsettingsMenu.items[8] = OverlayButton:new(Overlay:new("GUIMPsettingsSaveButton", "data/menu/save_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), MPsettingsMenuSave)
+    	MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
+		gameMenuSystem.MPsettingsMenu.items[9] = OverlayButton:new(Overlay:new("GUIMPclientPlayButton", "data/menu/ingame_play_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), MPclientMenuConnect) --client only button showing up in settings
+	elseif argument == "Settings" then
+		print("[LS2008MP] settings selected using GUI button")
+    	MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
+    	gameMenuSystem.MPsettingsMenu.items[8] = OverlayBetterButton:new(Overlay:new("GUIMPsettingsBackButton", "data/menu/back_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), settingsMenuBack)
+    	MPsettingsMenuxPos = MPsettingsMenuxPos + 0.15+0.02;
+		gameMenuSystem.MPsettingsMenu.items[9] = OverlayButton:new(Overlay:new("GUIMPsettingsSaveButton", "data/menu/save_button".. g_languageSuffix .. ".png", MPsettingsMenuxPos, 0.02, 0.15, 0.06), MPsettingsMenuSave)
+		gameMenuSystem.MPsettingsMenu.items[10] = OverlayBetterButton:new(Overlay:new("GUIMPsettingsLimitDown", "data/menu/small_button_left.png", 0.35, 0.232, 0.06*0.75, 0.06), MPsettingsLimit, "-1")
+   	 	gameMenuSystem.MPsettingsMenu.items[11] = OverlayBetterButton:new(Overlay:new("GUIMPsettingsLimitUp", "data/menu/small_button_right.png", 0.55, 0.232, 0.06*0.75, 0.06), MPsettingsLimit, "+1")
+	end
+	
+	gameMenuSystem.currentMenu = gameMenuSystem.MPsettingsMenu;
+end
 function MPsettingsMenuSave()
 	print("[LS2008MP] settings menu save settings")
 	modifyMPSettings(MPplayerName, MPip, MPport)
 	MPsettingsMenuSelected = ""
 end
-function MPsettingsMenuSelectName()
-	MPsettingsMenuSelected = "name"
+function MPsettingsMenuSelect(argument)
+	MPsettingsMenuSelected = argument
 end
-function MPsettingsMenuSelectIP()
-	MPsettingsMenuSelected = "ip"
-end
-function MPsettingsMenuSelectPort()
-	MPsettingsMenuSelected = "port"
-end
-function MPsettingsLimitUp()
-	if MPplayerLimit < 30 then
-		MPplayerLimit = MPplayerLimit+1
-	end
-end
-function MPsettingsLimitDown()
-	if MPplayerLimit > 2 then
-		MPplayerLimit = MPplayerLimit-1
+function MPsettingsLimit(argument)
+	if MPplayerLimit < 30 and MPplayerLimit > 2 then
+		loadstring("MPplayerLimit = MPplayerLimit"..argument)();
 	end
 end
 function MPOnInGameMenuMenu()
@@ -361,19 +348,19 @@ function MPOnInGameMenuMenu()
 	restartApplication() --restarting the game because it's just pointless to go back to the menu
 end
 function MPclientMenuConnect()
-	if string.len(MPplayerName) == 0 then
+	if MPplayerName:len() == 0 then
 		print("[LS2008MP] uh oh, empty player name...")
 		printChat("Uh oh, you don't have any player name.")
 		return
 	end
 	
-	if string.len(MPip) == 0 then
+	if MPip:len() == 0 then
 		print("[LS2008MP] uh oh, empty IP...")
 		printChat("Uh oh, you don't have any IP address to connect to.")
 		return
 	end
 	
-	if string.len(MPport) == 0 then
+	if tostring(MPport):len() == 0 then
 		print("[LS2008MP] uh oh, empty port...")
 		printChat("Uh oh, you don't have any port.")
 		return
@@ -464,7 +451,10 @@ function MPleftVehicle(i, playerName)
 		local MPvehicle = g_currentMission.vehicles[tonumber(MPplayerVehicle[i])]
 		
 		--stopSample(MPvehicle.motorSound);
-    	Utils.setEmittingState(MPvehicle.exhaustParticleSystems, false)
+		if MPvehicle.exhaustParticleSystems ~= nil then
+    		Utils.setEmittingState(MPvehicle.exhaustParticleSystems, false)
+    	end	
+    	
 		MPvehicle.MPsitting = false
 		for i=1, MPvehicle.numLights do
         	setVisibility(MPvehicle.lights[i], false);
@@ -495,7 +485,9 @@ function MPenterVehicle(i, playerName)
 		
 		MPvehicle.playMotorSound = true
 		--playSample(MPvehicle.motorSound, 0, 1, 0); 
-    	Utils.setEmittingState(MPvehicle.exhaustParticleSystems, true)
+    	if MPvehicle.exhaustParticleSystems ~= nil then
+    		Utils.setEmittingState(MPvehicle.exhaustParticleSystems, true)
+    	end	
     	MPvehicle.MPsitting = true
     	
     	--show ModAgri player even if not playing on ModAgri
@@ -607,11 +599,6 @@ function MPvehicleUpdate(self, dt, isActive)
     		self.attachedImplements[i].object:update(dt);
     	end;
         
-    	--lights
-		--for i=1, self.numLights do
-		--	local light = self.lights[i];
-		--	setVisibility(light, self.lightsActive);
-		--end
 		
 		if self.MPinputEvent == "lower" then
 			self.MPinputEvent = ""
@@ -624,18 +611,6 @@ function MPvehicleUpdate(self, dt, isActive)
             		jointDesc.moveDown = false
             	end
     		end;
-		elseif self.MPinputEvent == "lights" then
-			self.MPinputEvent = ""
-			if self.MPeventState == "true" then
-				--self.lightsActive = true
-			else
-				--self.lightsActive = false
-			end
-            for i=1, self.numLights do
-                --local light = self.lights[i];
-                --setVisibility(light, self.lightsActive);
-            end;
-            --disabling lights sync because it can also crash the game, thanks GIANTS Software
         elseif self.MPinputEvent == "switchImplement" then
         	self.MPinputEvent = ""
             self:setSelectedImplement(tonumber(self.MPeventState));
@@ -717,8 +692,6 @@ function MPvehicleUpdate(self, dt, isActive)
         				LIjointDesc = self.attacherJoints[LIimplement.jointDescIndex];
         				MPSend("bc1;vehEvent;lower;"..MPplayerName..";"..self.MPindex..";"..tostring(LIjointDesc.moveDown))
     				end;
-        		elseif InputBinding.hasEvent(InputBinding.TOGGLE_LIGHTS) then
-        	    	MPSend("bc1;vehEvent;lights;"..MPplayerName..";"..i..";"..tostring(self.lightsActive))
 				elseif InputBinding.hasEvent(InputBinding.SWITCH_IMPLEMENT) then
 					if table.getn(self.attachedImplements) > 0 then
         				MPSend("bc1;vehEvent;switchImplement;"..MPplayerName..";"..self.MPindex..";"..tostring(self.selectedImplement))
@@ -885,7 +858,7 @@ function MPupdate(dt)
 					end
 		
 					--sending files
-					MPtcpClient = MPtcp:accept()
+					--[[MPtcpClient = MPtcp:accept()
   					if MPtcpClient then
   						for i,v in ipairs(MPsavegameFiles) do
 							MPfileLoad = assert(io.open(gameMenuSystem.quickPlayMenu:getSavegameDirectory(gameMenuSystem.serverMenu.selectedIndex).."/"..v, "rb"))
@@ -894,7 +867,7 @@ function MPupdate(dt)
 							MPtcpClient:send(v .. ";" .. MPfileData .. "\r\n")
 						end	
 						MPtcpClient:close()
-    				end
+    				end]]--
 
 					handleUDPmessage("bc1;playerConnected;"..MPserverPASGname, MPserverPASGip, MPserverPASGport) --unfreezing the game
 				end
@@ -903,7 +876,7 @@ function MPupdate(dt)
 			end
 			MPupdateTick2 = MPupdateTick2 + 1
 
-			if MPupdateTick1 > 3 then
+			if MPupdateTick1 > 1 then
 				if g_currentMission.controlPlayer then						
 					if Player.lastXPos ~= currXPos or Player.lastYPos ~= currYPos or Player.lastZPos ~= currZPos or round(Player.rotY+0,1) ~= currYRot then
 						local UDPmoverot = "bc1;plr;"..MPplayerName..";"..(round(Player.lastXPos+0,1))..";"..(round(Player.lastYPos+0,1))..";"..(round(Player.lastZPos+0,1))..";"..(round(Player.rotY+0,1)) -- .. ";" ..(round(tempRX+0,2))..";"..(round(tempRY+0,2))..";"..(round(tempRZ+0,2))
@@ -932,7 +905,7 @@ end
 function MPmodifyVehicleScripts()
 	local modifiedVeh = "[LS2008MP] script %s was modified successfully!"
 	local noVehScript = "[LS2008MP] script %s not found"
-	local modifyError = "[LS2008MP] An error happened while modifying script %s"
+	local modifyError = "[LS2008MP] ERROR: An error happened while modifying script %s"
 	
 	print("[LS2008MP] postMission00load script update, do not panic unless necessary (or just ask Morc if you're really worried)")
 	
@@ -955,9 +928,9 @@ function MPmodifyVehicleScripts()
 		Vehicle.handleDetachTrailerEvent = MPsyncDetachTrailer
 		Vehicle.attachTrailer = MPsyncAttachTrailer
 		MPvehicleOriginalUpdate = MPfakeFunction
-		print(string.format(modifiedVeh, "Vehicle"))
+		print(modifiedVeh:format("Vehicle"))
 	else
-		print(string.format(noVehScript, "Vehicle"))
+		print(noVehScript:format("Vehicle"))
 	end
 	print("[LS2008MP] main script modification finished")
 	
@@ -966,17 +939,17 @@ function MPmodifyVehicleScripts()
 		local customScript = "MP"..script.."ScriptUpdate()"
 		local status, err = pcall(function() loadstring(customScript)() end)
 		if status then
-			print(string.format(modifiedVeh, script))
+			print(modifiedVeh:format(script))
 		else
 			if err:find("attempt to index global '" .. script .. "'") then
-				print(string.format(noVehScript, script))
+				print(noVehScript:format(script))
 			else
-				print(string.format(modifyError, script))
+				print(modifyError:format(script))
 				print(err)
 			end
 		end
 	end
-	print("[LS2008MP] vehicle/custom script modification finished")
+	print("[LS2008MP] script modification finished")
 end
 
 --setWorldPosition with og game support and loadVehicle function with og game support + adds vehicleName
@@ -1023,7 +996,7 @@ function MPloadVehicle(self, filename, x, yOffset, z, yRot)
             		if ret.vehicleName ~= nil then
             			print("[LS2008MP] adding vehicleName variable using method 2 as " .. ret.vehicleName .. " to vehicle '"..filename.."'")
             		else
-            			print("[LS2008MP] tried adding vehicleName variable to vehicle '"..filename.."' but failed...")
+            			print("[LS2008MP] WARNING: tried adding vehicleName variable to vehicle '"..filename.."' but failed...")
             		end
             	end
             end
@@ -1053,24 +1026,32 @@ function MPInGameMenuRender(self)
         self.doSaveGamePart2 = false;
     end;
 end
-function MPinGameMenuMode(self)
-	print("[LS2008MP] inGameMenu mode")
-	self.inGameMenu:reset()
-	if MPstate == "Client" then --replace save button if on client
-		gameMenuSystem.inGameMenu.items[1] = Overlay:new("MPplayerOverlay", "data/missions/hud_help_base.png", 0.012, 0.18, 0.425, 0.8);
-	else --assuming that 4th index is empty for server, setting it to the overlay
-		gameMenuSystem.inGameMenu.items[4] = Overlay:new("MPplayerOverlay", "data/missions/hud_help_base.png", 0.012, 0.18, 0.425, 0.8);
+function MPOnInGameMenu()
+    if g_currentMission.currentVehicle.isEntered and (g_currentMission.currentVehicle.lastSpeed*3600) >= 1 then
+		print("[LS2008MP] failed to open inGameMenu due to vehicle moving")
+		g_currentMission:addWarning("we have a problem", 0.05, 0.025+0.007);
+		setShowMouseCursor(false);
+	else
+		print("[LS2008MP] inGameMenu mode")
+		self.inGameMenu:reset()
+		if MPstate == "Client" then --replace save button if on client
+			gameMenuSystem.inGameMenu.items[1] = Overlay:new("MPplayerOverlay", "data/missions/hud_help_base.png", 0.012, 0.18, 0.425, 0.8);
+		else --assuming that 4th index is empty for server, setting it to the overlay
+			gameMenuSystem.inGameMenu.items[4] = Overlay:new("MPplayerOverlay", "data/missions/hud_help_base.png", 0.012, 0.18, 0.425, 0.8);
+		end
+		self.currentMenu = gameMenuSystem.inGameMenu
+		setShowMouseCursor(true);
+		Player.update = MPfakeFunction
+		--disabling update functions, this way it's a little bit less performance hogging
+		if Vehicle ~= nil then
+			MPvehicleOriginalUpdate = MPfakeFunction
+		end
+		if Cougar ~= nil then
+			MPCougarOriginalUpdate = MPfakeFunction
+		end
 	end
-	self.currentMenu = gameMenuSystem.inGameMenu
-	Player.update = MPfakeFunction
-	--disabling update functions, this way it's a little bit less performance hogging
-	if Vehicle ~= nil then
-		MPvehicleOriginalUpdate = MPfakeFunction
-	end
-	if Cougar ~= nil then
-		MPCougarOriginalUpdate = MPfakeFunction
-	end
-end
+end;
+
 function MPplayMode(self)
 	print("[LS2008MP] playMode mode")
 	self.currentMenu = nil
@@ -1096,10 +1077,20 @@ function MPdraw()
 	local MPgameText = "LS2008MP v" .. MPversion
 	if MPrenderDebugText then
 		MPgameText = "LS2008MP v" .. MPversion .. " | " .. MPstate .. " | Name: " .. MPplayerName .. " | IP: " .. MPip .. ":" .. MPport
-		renderText(0.0, 0.96, 0.02, lastUDPmessage) --handy last message render thing, useful for finding some bugs
+		original.renderText(0.0, 0.96, 0.02, lastUDPmessage) --handy last message render thing, useful for finding some bugs
 	end
-	renderText(0.0, 0.98, 0.02, MPgameText);
+	original.renderText(0.0, 0.98, 0.02, MPgameText);
 	setTextBold(false);
+	
+	if hideHUD and gameMenuSystem.currentMenu ~= nil then
+		renderText = original.renderText
+		print("[LS2008MP] disabling HideHUD")
+		hideHUD = false
+	end
+	
+	if hideHUD then
+		return
+	end
 	
 	--if g_currentMission ~= nil then
 		for i=1,#MPplayerVehicle do
@@ -1136,7 +1127,7 @@ function MPdraw()
 	if MPshowNewPlayerWarning then
 		setTextBold(true);
         g_currentMission.hudWarningBaseOverlay:render();
-        renderText(0.07+0.022+0.24, 0.019+0.029+1-0.539, 0.035, string.format(MPsyncingDataText, MPnewPlayerName));
+        renderText(0.07+0.022+0.24, 0.019+0.029+1-0.539, 0.035, MPsyncingDataText:format(MPnewPlayerName));
         setTextBold(false);
 	end
 	
@@ -1190,17 +1181,18 @@ function MPdraw()
 		renderText(0.015, 0.94, 0.04, "LS2008MP | " .. MPstate .. " | " .. MPplayerName)
 		renderText(0.015, 0.91, 0.035, "Players ("..#MPcleanPlayers.."):")
 		setTextBold(false);
-
+		local currentPlayer = 1
 		for i=1,#MPplayerVehicle do
 			if MPplayers[i] ~= "N/A" then
-    			textYpos = textYpos - 0.03
+				currentPlayer = currentPlayer + 1
+    			textYpos = textYpos - 0.04
     			local playerText = MPplayers[i]
     			
     			if MPplayerVehicle[i] ~= "none" then
     				if g_currentMission.vehicles[tonumber(MPplayerVehicle[i])].vehicleName ~= nil then	
-						playerText = string.format(MPplayerListSitting2, MPplayers[i], g_currentMission.vehicles[tonumber(MPplayerVehicle[i])].vehicleName)
+						playerText = MPplayerListSitting2:format(MPplayers[i], g_currentMission.vehicles[tonumber(MPplayerVehicle[i])].vehicleName)
 					else
-						playerText = string.format(MPplayerListSitting1, MPplayers[i])
+						playerText = MPplayerListSitting1:format(MPplayers[i])
 					end
 				end
 				
@@ -1231,6 +1223,17 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
 	if isDown then
 		if sym == 96 then
 			renderConsoleBackground = not renderConsoleBackground
+		end
+		
+		if sym == 291 then
+			hideHUD = not hideHUD
+			if hideHUD then
+				renderText = MPfakeFunction
+				print("[LS2008MP] enabling HideHUD")
+			else
+				renderText = original.renderText
+				print("[LS2008MP] disabling HideHUD")
+			end
 		end
 	
 		--client/settings menu key handling
@@ -1280,7 +1283,7 @@ function MPkeyEvent(unicode, sym, modifier, isDown)
 			elseif sym == Input.KEY_return then --enter/return to send the message
 				InputBinding.hasEvent = original.hasEvent
 				getInputAxis = original.getInputAxis
-				if string.len(MPchatText) ~= 0 then
+				if MPchatText:len() ~= 0 then
 					MPSend("bc1;chat;"..MPplayerName.. ": " .. MPchatText)
 				end
 				MPchat = false
@@ -1316,35 +1319,48 @@ end
 --MP init functions
 function MPClientInit()
 	print("[LS2008MP] starting client connection to " .. MPip .. ":" .. MPport)
-	MPudp:setpeername(MPip, MPport)
-	MPudp:send("login;" .. MPplayerName .. ";" .. MPversion)
+	host = enet.host_create()
+	server = host:connect(MPip .. ":" .. MPport)
 	MPaddToPlayerList(MPplayerName)
 	MPchangeInPlayerList(#MPplayers,MPplayerName,"local",MPport)
 end
 function MPServerInit()
 	print("[LS2008MP] starting server on port " .. MPport)
-	MPudp:setsockname("*", MPport)
+	host = enet.host_create("*:"..MPport)
 	MPaddToPlayerList(MPplayerName)
 	MPchangeInPlayerList(#MPplayers,MPplayerName,"local",MPport)
 end
 
 --MP heartbeat functions for server and client
 function MPClientHeartbeat()
-	data = MPudp:receive()
-	if data then
-		handleUDPmessage(data, MPip, MPport)
-	end
+	event = host:service(0)
+  	if event then
+    	if event.type == "connect" then
+			event.peer:send("login;".. MPplayerName .. ";" .. MPversion)
+    	elseif event.type == "receive" then
+     		--print("data: "..event.data.." peer:"..event.peer)
+     		handleUDPmessage(event.data, MPip, MPport)
+     	elseif event.type == "disconnect" then
+			print("bye bye.. the server died", event.peer)
+   		end
+  	end
 end
 function MPServerHeartbeat()
-	data, msg_or_ip, port_or_nil = MPudp:receivefrom()
-	if data then
-		handleUDPmessage(data, msg_or_ip, port_or_nil)
-	end
+	event = host:service(0)
+  	if event then
+  		if	event.type == "receive" then
+    		--print("", event.data, server)
+    		handleUDPmessage(event.data, MPip, MPport)
+   		elseif event.type == "disconnect" then
+     		print("bye bye, someone has left the game")
+    	elseif event.type == "connect" then
+     	end
+  	end
 end
 
 --MP send functions for server and client
 function MPClientSend(message) --wrapper for client
-		MPudp:send(message)
+		server:send(message)
 end
 function MPServerSend(message) --wrapper for server
 		handleUDPmessage(message, MPip, MPport)
@@ -1361,7 +1377,7 @@ function handleUDPmessage(msg, msgIP, msgPort)
 		
 	elseif p[1] == "server" then --CLIENT return the server host and player list to the new connected client
 		print("[LS2008MP] you are playing with " .. p[2] .. " on server " .. msgIP .. ":" .. msgPort)
-		clientTCP:connect(MPip, MPport);
+		--[[clientTCP:connect(MPip, MPport);
 		while true do
     		local file, status, partial = clientTCP:receive()
     		if file ~= nil then
@@ -1375,7 +1391,7 @@ function handleUDPmessage(msg, msgIP, msgPort)
 				clientTCP:close();
     			break
     		end
-		end
+		end]]--
 		
 		MPaddToPlayerList(p[2]) --add serverhostplayer to the player list of the client
 		playerList = ""
@@ -1431,11 +1447,11 @@ function handleUDPmessage(msg, msgIP, msgPort)
 		end	
 		--print("[LS2008MP] " .. p[2] .. " left vehicle " .. p[3])
 	elseif p[1] == "setCurrentMission" then
-		g_currentMission.environment.dayTime = p[2]	
-		g_currentMission.environment.timeUntilNextRain = p[3]
-		g_currentMission.environment.nextRainType = p[4]
-		g_currentMission.missionStats.money = p[5]
-		g_currentMission.environment.timeScale = p[6]
+		g_currentMission.environment.dayTime = tonumber(p[2])	
+		g_currentMission.environment.timeUntilNextRain = tonumber(p[3])
+		g_currentMission.environment.nextRainType = tonumber(p[4])
+		g_currentMission.missionStats.money = tonumber(p[5])
+		g_currentMission.environment.timeScale = tonumber(p[6])
 				
 	elseif p[1] == "vehEvent" then
 		for i=1,#MPplayers do
@@ -1561,30 +1577,24 @@ function handleUDPmessage(msg, msgIP, msgPort)
 			end
 		end
 	elseif p[1] == "bc1" then --SERVER broadcast the message to all clients
-		for i,player in ipairs(MPplayers) do
-			if i>1 then
-				if MPplayerIPs[i] ~= "N/A" then
-					MPudp:sendto(string.sub(msg, 5), MPplayerIPs[i], MPplayerPorts[i])
-				end
-			end
-		end
-		handleUDPmessage(string.sub(msg, 5), MPip, MPport)
+		host:broadcast(msg:sub(5))
+		handleUDPmessage(msg:sub(5), MPip, MPport)
 	
 	elseif p[1] == "login" then --SERVER broadcast that a new player has arrived and add him to player list
-		print("[LS2008MP] " .. p[2] .. " is trying to join from " .. msgIP .. ":" .. msgPort)
+		print("[LS2008MP] " .. p[2] .. " is trying to join from " .. msgIP)
         MPcleanPlrListRefresh()
         if #MPcleanPlayers+1 > MPplayerLimit then
-        	MPudp:sendto("noconn;3", msgIP, msgPort)
+        	event.peer:send("noconn;3")
         	print("[LS2008MP] " .. p[2] .. " not connected because the server is full")
         	return
         end
         if p[2] == MPplayerName then
-        	MPudp:sendto("noconn;1", msgIP, msgPort)
+        	event.peer:send("noconn;1")
         	print("[LS2008MP] " .. p[2] .. " not connected because he has the same name as you..")
         	return
         end
         if p[3] ~= MPversion then
-        	MPudp:sendto("noconn;2", msgIP, msgPort)
+        	event.peer:send("noconn;2")
         	print("[LS2008MP] beware, " .. p[2] .. " is running LS2008MP v" .. p[3] .. " (instead of " .. MPversion .. ")")
         	printChat("Warning: " .. p[2] .. " is running LS2008MP v" .. p[3] .. ", messy things could start to happen")
         end
@@ -1620,7 +1630,8 @@ function handleUDPmessage(msg, msgIP, msgPort)
 				playerList = playerList .. ";" .. MPplayers[i]
 			end
 		end
-		MPudp:sendto("server;"..MPplayerName..";"..#MPplayers..";"..playerList, msgIP, msgPort)--send the raw player list to the new client
+		event.peer:send("server;"..MPplayerName..";"..#MPplayers..";"..playerList)--send the raw player list to the new client
+		MPpeerList[tostring(event.peer:connect_id())] = event.peer
 		
 		MPserverPASG = true
 		MPserverPASGip = msgIP
@@ -1648,7 +1659,7 @@ function handleUDPmessage(msg, msgIP, msgPort)
 		end
 	elseif p[1] == "syncCurrentMissionToClient" then
     	handleUDPmessage("bc1;requestEntered;", MPip, MPport)
-    	MPudp:sendto("setCurrentMission;"..g_currentMission.environment.dayTime..";"..g_currentMission.environment.timeUntilNextRain..";"..g_currentMission.environment.nextRainType..";"..g_currentMission.missionStats.money..";"..g_currentMission.environment.timeScale, msgIP, msgPort)
+    	event.peer:send("setCurrentMission;"..g_currentMission.environment.dayTime..";"..g_currentMission.environment.timeUntilNextRain..";"..g_currentMission.environment.nextRainType..";"..g_currentMission.missionStats.money..";"..g_currentMission.environment.timeScale)
     	
 	else
 		print("[LS2008MP] undefined UDP message(maybe older version of LS2008MP?) received from " .. msgIP .. ":" .. msgPort ..  ": " .. msg)
@@ -1696,9 +1707,12 @@ function MPchangeInPlayerList(hisID,hisName,hisIP,hisPort)
 end
 function MPcleanPlrListRefresh()
 	MPcleanPlayers = {}
+	local currentPlayer = 1;
 	for i=1, #MPplayers do
 		if MPplayers[i] ~= "N/A" then
+			currentPlayer = currentPlayer + 1
 			MPcleanPlayers[#MPcleanPlayers+1] = MPplayers[i]
+			gameMenuSystem.inGameMenu.items[(4+currentPlayer)] = OverlayBetterButton:new(Overlay:new("GUIMPkickButton", MPclientButtonPath, 0.325, 0.005, 0.10, 0.04), MPkickPlayer, MPplayers[i])
 		end
 	end
 end
@@ -1744,11 +1758,11 @@ function modifyMPSettings(newName, newIP, newPort)
 
 	for i=1,#fileContent do
 		--print(fileContent[i])
-        if string.starts(fileContent[i], "MPip = ") then
+        if fileContent[i].starts("MPip = ") then
         	fileContent[i] = "MPip = \"".. newIP .. "\""
-        elseif string.starts(fileContent[i], "MPport = ") then
+        elseif fileContent[i]:starts("MPport = ") then
         	fileContent[i] = "MPport = ".. newPort
-        elseif string.starts(fileContent[i], "MPplayerName = ") then
+        elseif fileContent[i]:starts("MPplayerName = ") then
         	fileContent[i] = "MPplayerName = \"".. newName .. "\""
         end
     end

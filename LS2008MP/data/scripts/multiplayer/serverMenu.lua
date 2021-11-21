@@ -67,25 +67,25 @@ function serverMenu:new(backgroundOverlay)
     instance.startIndex = 1;
     instance.selectedIndex = 1;
 
-    instance:addButton(OverlayButton:new(Overlay:new("up_button", "data/menu/up_button.png", 0.5-0.5*instance.buttonWidth, 1-instance.upDownButtonSpacing-instance.buttonHeight, instance.buttonWidth, instance.buttonHeight), OnserverMenuScrollUp));
-    instance:addButton(OverlayButton:new(Overlay:new("down_button", "data/menu/down_button.png", 0.5-0.5*instance.buttonWidth, instance.upDownButtonSpacing+instance.backPlayButtonSpacing+instance.buttonHeight, instance.buttonWidth, instance.buttonHeight), OnserverMenuScrollDown));
+    instance:addButton(OverlayBetterButton:new(Overlay:new("up_button", "data/menu/up_button.png", 0.5-0.5*instance.buttonWidth, 1-instance.upDownButtonSpacing-instance.buttonHeight, instance.buttonWidth, instance.buttonHeight), OnserverMenuScroll, "-1"));
+    instance:addButton(OverlayBetterButton:new(Overlay:new("down_button", "data/menu/down_button.png", 0.5-0.5*instance.buttonWidth, instance.upDownButtonSpacing+instance.backPlayButtonSpacing+instance.buttonHeight, instance.buttonWidth, instance.buttonHeight), OnserverMenuScroll, "+1"));
 
     local buttonSpacingSide = 0.03
     local xPos = 1-buttonSpacingSide-instance.backPlayButtonSpacing-instance.buttonWidth*3  --0.65;
-    instance:addButton(OverlayButton:new(Overlay:new("settings_button", "data/menu/main_settings_button".. g_languageSuffix .. ".png", xPos, instance.backPlayButtonSpacing, instance.buttonWidth, instance.buttonHeight), MPopenSettingsMenu));
+    instance:addButton(OverlayBetterButton:new(Overlay:new("settings_button", "data/menu/main_settings_button".. g_languageSuffix .. ".png", xPos, instance.backPlayButtonSpacing, instance.buttonWidth, instance.buttonHeight), MPopenMenu, "Settings"));
     xPos = xPos + instance.buttonWidth+instance.backPlayButtonSpacing;
     
-    instance:addButton(OverlayButton:new(Overlay:new("back_button", "data/menu/back_button".. g_languageSuffix .. ".png", xPos, instance.backPlayButtonSpacing, instance.buttonWidth, instance.buttonHeight), OnserverMenuBack));
+    instance:addButton(OverlayBetterButton:new(Overlay:new("back_button", "data/menu/back_button".. g_languageSuffix .. ".png", xPos, instance.backPlayButtonSpacing, instance.buttonWidth, instance.buttonHeight), OnserverMenu, "gameMenuSystem:mainMenuMode()"));
     xPos = xPos + instance.buttonWidth+instance.backPlayButtonSpacing;
-    instance:addButton(OverlayButton:new(Overlay:new("play_button", "data/menu/ingame_play_button".. g_languageSuffix .. ".png", xPos, instance.backPlayButtonSpacing, instance.buttonWidth, instance.buttonHeight), OnserverMenuPlay));
+    instance:addButton(OverlayBetterButton:new(Overlay:new("play_button", "data/menu/ingame_play_button".. g_languageSuffix .. ".png", xPos, instance.backPlayButtonSpacing, instance.buttonWidth, instance.buttonHeight), OnserverMenu, "gameMenuSystem.serverMenu:startSelectedGame()"));
     xPos = xPos + instance.buttonWidth+instance.backPlayButtonSpacing;
 
-    instance:addButton(OverlayButton:new(Overlay:new("delete_button", "data/menu/delete_button".. g_languageSuffix .. ".png", buttonSpacingSide, instance.backPlayButtonSpacing, instance.buttonWidth, instance.buttonHeight), OnserverMenuDelete));
+    instance:addButton(OverlayBetterButton:new(Overlay:new("delete_button", "data/menu/delete_button".. g_languageSuffix .. ".png", buttonSpacingSide, instance.backPlayButtonSpacing, instance.buttonWidth, instance.buttonHeight), OnserverMenu, "gameMenuSystem.serverMenu:deleteSelectedGame()"));
     
    	local f=io.open("data/menu/reset_vehicles_button".. g_languageSuffix .. ".png","r")
    	if f~=nil then
    		io.close(f)
-   		instance:addButton(OverlayButton:new(Overlay:new("reset_vehicles_button", "data/menu/reset_vehicles_button".. g_languageSuffix .. ".png", buttonSpacingSide+instance.buttonWidth+instance.backPlayButtonSpacing, instance.backPlayButtonSpacing, instance.largeButtonWidth, instance.buttonHeight), OnserverMenuResetVehicles));
+   		instance:addButton(OverlayBetterButton:new(Overlay:new("reset_vehicles_button", "data/menu/reset_vehicles_button".. g_languageSuffix .. ".png", buttonSpacingSide+instance.buttonWidth+instance.backPlayButtonSpacing, instance.backPlayButtonSpacing, instance.largeButtonWidth, instance.buttonHeight), OnserverMenu, "gameMenuSystem.serverMenu:resetVehiclesOfSelectedGame()"));
    	else
    		print("[LS2008MP] data/menu/reset_vehicles_button".. g_languageSuffix .. ".png is missing but nevermind, i'll not add the button to server menu")
    	end
@@ -120,16 +120,16 @@ function serverMenu:mouseEvent(posX, posY, isDown, isUp, button)
             end;
 
             if clicked and lastIndex == self.selectedIndex and self.doubleClickTime+500 > self.time then
-                OnserverMenuPlay();
+                OnserverMenu("gameMenuSystem.serverMenu:startSelectedGame()");
             end;
             self.doubleClickTime = self.time;
 
         else
             if Input.isMouseButtonPressed(Input.MOUSE_BUTTON_WHEEL_UP) then
-                OnserverMenuScrollUp();
+                OnserverMenuScroll("-1");
             else
                 if Input.isMouseButtonPressed(Input.MOUSE_BUTTON_WHEEL_DOWN) then
-                    OnserverMenuScrollDown();
+                    OnserverMenuScroll("+1");
                 end;
             end;
 
@@ -572,8 +572,8 @@ function serverMenu:getStatsFromMission(savegame)
 
 end;
 
-function OnserverMenuBack()
-	gameMenuSystem:mainMenuMode();
+function OnserverMenu(arg)
+	loadstring(arg)()
 	MPsettingsMenuSelected = ""
 end;
 
@@ -582,23 +582,6 @@ function settingsMenuBack()
 	MPsettingsMenuSelected = ""
 end;
 
-function OnserverMenuPlay()
-	gameMenuSystem.serverMenu:startSelectedGame();
-	MPsettingsMenuSelected = ""
-end;
-
-function OnserverMenuDelete()
-	gameMenuSystem.serverMenu:deleteSelectedGame();
-end;
-
-function OnserverMenuResetVehicles()
-    gameMenuSystem.serverMenu:resetVehiclesOfSelectedGame();
-end;
-
-function OnserverMenuScrollUp()
-    gameMenuSystem.serverMenu:setSelectedIndex(gameMenuSystem.serverMenu.selectedIndex-1);
-end;
-
-function OnserverMenuScrollDown()
-    gameMenuSystem.serverMenu:setSelectedIndex(gameMenuSystem.serverMenu.selectedIndex+1);
+function OnserverMenuScroll(argument)
+    loadstring("gameMenuSystem.serverMenu:setSelectedIndex(gameMenuSystem.serverMenu.selectedIndex"..argument..")")()
 end;

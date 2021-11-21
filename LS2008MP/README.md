@@ -2,7 +2,7 @@
 What is (Farming) Landwirtschafts Simulator 2008 Multiplayer?
 
 Well, the name says it all, it's a fan made modification that adds multiplayer support to LS2008.
-It's based on LuaSockets and a clever lua inject "technology" that is supposed to be compatible with every single modpack or version of the game.
+It's based on Lua-ENet and a clever lua inject "technology" that is supposed to be compatible with every single modpack or version of the game.
 It *should* work on the base game with official Grass Mod addon without any problems
 
 It's working somehow right now but it's still not all synced as it should and lacks many, many features.

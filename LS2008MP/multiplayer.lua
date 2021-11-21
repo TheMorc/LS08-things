@@ -16,7 +16,7 @@ MPplayerNameRndNums = false
 MPplayerLimit = 10
 
 --Render text on top
-MPrenderDebugText = true
+MPrenderDebugText = false
 
 --Use the new LS2008 logo
 MPuseNewLogo = true
