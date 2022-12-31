@@ -11,7 +11,9 @@ It includes:
 * unpacked scripts.zip
 
 *and more!*
-## Game decryption passwords for scripts.zip or other encrypted files
+## Game decryption passwords
+- *used for scripts.zip or other encrypted files*
+
 `411S6R5772V673kT` password for most versions of the game
 
 `hcW1ypKJMePDkwqD` password for the demo version
