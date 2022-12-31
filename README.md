@@ -10,7 +10,8 @@ It includes:
 * both versions of i3d Blender Exporter for GIANTS Editor v0.2.5-4.0.0
 * unpacked scripts.zip
 
-## Passwords
+*and more!*
+## Game decryption passwords for scripts.zip or other encrypted files
 `411S6R5772V673kT` password for most versions of the game
 
 `hcW1ypKJMePDkwqD` password for the demo version
